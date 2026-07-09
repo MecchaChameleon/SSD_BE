@@ -1,0 +1,35 @@
+databases:
+  - name: jeju-localtime-db
+    plan: free
+    databaseName: jeju_localtime
+    user: jeju_admin
+
+services:
+  - type: web
+    name: jeju-localtime-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: jeju-localtime-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: jeju-localtime-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: jeju-localtime-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: jeju-localtime-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: jeju-localtime-db
+          property: password
