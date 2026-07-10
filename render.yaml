@@ -33,3 +33,5 @@ services:
         fromDatabase:
           name: jeju-localtime-db
           property: password
+      - key: JWT_SECRET
+        generateValue: true

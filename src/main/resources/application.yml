@@ -21,3 +21,7 @@ management:
   endpoint:
     health:
       show-details: never
+
+jwt:
+  secret: ${JWT_SECRET:local-dev-only-secret-key-change-me-32bytes-min}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
