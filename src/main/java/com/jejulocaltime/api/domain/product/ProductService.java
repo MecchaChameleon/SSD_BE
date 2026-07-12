@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -45,8 +46,8 @@ public class ProductService {
         product.setAvailableStartAt(request.openTime());
         product.setReservationCloseAt(request.deadline());
         product.setFootTrafficLevel(request.foot());
-        product.setLatitude(request.lat());
-        product.setLongitude(request.lng());
+        product.setLatitude(toBigDecimal(request.lat()));
+        product.setLongitude(toBigDecimal(request.lng()));
         product.setStatus(Product.Status.ACTIVE);
 
         Product saved = productRepository.save(product);
@@ -74,10 +75,14 @@ public class ProductService {
         if (request.openTime() != null) product.setAvailableStartAt(request.openTime());
         if (request.deadline() != null) product.setReservationCloseAt(request.deadline());
         if (request.foot() != null) product.setFootTrafficLevel(request.foot());
-        if (request.lat() != null) product.setLatitude(request.lat());
-        if (request.lng() != null) product.setLongitude(request.lng());
+        if (request.lat() != null) product.setLatitude(toBigDecimal(request.lat()));
+        if (request.lng() != null) product.setLongitude(toBigDecimal(request.lng()));
 
         return ProductDto.Response.from(product);
+    }
+
+    private BigDecimal toBigDecimal(Double value) {
+        return value != null ? BigDecimal.valueOf(value) : null;
     }
 
     // 5. 내 상품/자원 목록 조회
