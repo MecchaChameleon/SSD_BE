@@ -19,7 +19,8 @@ public class SellerProfileService {
         
         // 1. 이미 프로필이 있는지 확인
         if (profileRepository.existsByUserId(userId)) {
-            throw new IllegalStateException("이미 등록된 가게 프로필이 존재합니다.");
+            return updateProfile(userId, new SellerProfileDto.UpdateRequest(
+                    request.address(), request.latitude(), request.longitude(), request.bankName(), request.accountNumber(), request.accountHolder()));
         }
 
         // 2. 내 입점 신청서가 '승인(APPROVED)' 상태인지 확인

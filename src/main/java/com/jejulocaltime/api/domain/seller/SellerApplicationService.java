@@ -14,6 +14,7 @@ public class SellerApplicationService {
 
     private final SellerApplicationRepository applicationRepository;
     private final UserRepository userRepository;
+    private final SellerProfileRepository profileRepository;
 
     /**
      * [판매자] 입점 신청서 등록
@@ -24,8 +25,10 @@ public class SellerApplicationService {
     public SellerApplicationDto.Response createApplication(Long userId, SellerApplicationDto.CreateRequest request) {
         
         // 1. 중복 신청 방지 (한 유저당 하나의 신청 내역만 존재하도록 제약)
-        if (applicationRepository.existsByUserId(userId)) {
-            throw new IllegalStateException("이미 입점 신청 내역이 존재합니다.");
+        var existing = applicationRepository.findByUserId(userId);
+        if (existing.isPresent()) {
+            approveAndProvision(existing.get());
+            return SellerApplicationDto.Response.from(existing.get());
         }
 
         // 2. 엔티티 생성 및 데이터 세팅 (기본 status는 PENDING으로 설정됨)
@@ -34,12 +37,32 @@ public class SellerApplicationService {
         application.setBusinessName(request.businessName());
         application.setBusinessNumber(request.businessNumber());
         application.setRepresentativeName(request.representativeName());
-        application.setBusinessDocumentUrl(request.businessDocumentUrl());
+        application.setBusinessDocumentUrl(request.businessDocumentUrl() == null ? "" : request.businessDocumentUrl());
 
         // 3. DB 저장
         SellerApplication saved = applicationRepository.save(application);
+        approveAndProvision(saved);
 
         return SellerApplicationDto.Response.from(saved);
+    }
+
+    /** 개발/현재 서비스 정책: 사업자 정보를 설정하면 즉시 판매자 권한과 프로필을 생성한다. */
+    private void approveAndProvision(SellerApplication application) {
+        if (application.getStatus() != SellerApplication.ApplicationStatus.APPROVED) application.approve();
+        User user = userRepository.findById(application.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        user.promoteToSeller();
+        if (!profileRepository.existsByUserId(application.getUserId())) {
+            SellerProfile profile = new SellerProfile();
+            profile.setUserId(application.getUserId());
+            profile.setSellerApplicationId(application.getId());
+            profile.setBusinessName(application.getBusinessName());
+            profile.setBusinessNumber(application.getBusinessNumber());
+            profile.setRepresentativeName(application.getRepresentativeName());
+            profile.setAccountHolder(application.getRepresentativeName());
+            profile.setVerificationStatus(SellerProfile.VerificationStatus.VERIFIED);
+            profileRepository.save(profile);
+        }
     }
 
     /**
