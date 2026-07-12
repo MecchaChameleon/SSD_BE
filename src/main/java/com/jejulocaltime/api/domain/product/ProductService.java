@@ -137,4 +137,18 @@ public class ProductService {
         product.setStatus(status);
         return ProductDto.Response.from(product);
     }
+
+    // 10. 예약 승인 시 잔여 수량(재고) 차감
+    @Transactional
+    public void decreaseRemainingQuantity(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
+
+        if (product.getRemainingQuantity() <= 0) {
+            throw new IllegalStateException("잔여 수량이 없어 예약을 승인할 수 없습니다.");
+        }
+
+        // 잔여 수량 1 차감
+        product.setRemainingQuantity(product.getRemainingQuantity() - 1);
+    }
 }
