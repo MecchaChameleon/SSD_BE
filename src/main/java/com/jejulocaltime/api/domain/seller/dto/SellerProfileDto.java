@@ -1,5 +1,6 @@
 package com.jejulocaltime.api.domain.seller.dto;
 
+import com.jejulocaltime.api.common.util.NumberConversions;
 import com.jejulocaltime.api.domain.seller.SellerProfile;
 import java.time.LocalDateTime;
 
@@ -52,8 +53,8 @@ public class SellerProfileDto {
                     entity.getBusinessNumber(),
                     entity.getRepresentativeName(),
                     entity.getAddress(),
-                    entity.getLatitude() != null ? entity.getLatitude().doubleValue() : null,
-                    entity.getLongitude() != null ? entity.getLongitude().doubleValue() : null,
+                    NumberConversions.toDouble(entity.getLatitude()),
+                    NumberConversions.toDouble(entity.getLongitude()),
                     entity.getBankName(),
                     entity.getAccountNumber(),
                     entity.getAccountHolder(),

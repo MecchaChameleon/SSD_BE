@@ -1,11 +1,10 @@
 package com.jejulocaltime.api.domain.seller;
 
+import com.jejulocaltime.api.common.util.NumberConversions;
 import com.jejulocaltime.api.domain.seller.dto.SellerProfileDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +42,8 @@ public class SellerProfileService {
         
         // 사장님 입력 정보 세팅
         profile.setAddress(request.address());
-        profile.setLatitude(toBigDecimal(request.latitude()));
-        profile.setLongitude(toBigDecimal(request.longitude()));
+        profile.setLatitude(NumberConversions.toBigDecimal(request.latitude()));
+        profile.setLongitude(NumberConversions.toBigDecimal(request.longitude()));
         profile.setBankName(request.bankName());
         profile.setAccountNumber(request.accountNumber());
         profile.setAccountHolder(request.accountHolder());
@@ -66,16 +65,12 @@ public class SellerProfileService {
 
         // 프론트엔드에서 null이 아닌 값을 보냈을 때만 부분 수정(Dirty Checking)
         if (request.address() != null) profile.setAddress(request.address());
-        if (request.latitude() != null) profile.setLatitude(toBigDecimal(request.latitude()));
-        if (request.longitude() != null) profile.setLongitude(toBigDecimal(request.longitude()));
+        if (request.latitude() != null) profile.setLatitude(NumberConversions.toBigDecimal(request.latitude()));
+        if (request.longitude() != null) profile.setLongitude(NumberConversions.toBigDecimal(request.longitude()));
         if (request.bankName() != null) profile.setBankName(request.bankName());
         if (request.accountNumber() != null) profile.setAccountNumber(request.accountNumber());
         if (request.accountHolder() != null) profile.setAccountHolder(request.accountHolder());
 
         return SellerProfileDto.Response.from(profile);
-    }
-
-    private BigDecimal toBigDecimal(Double value) {
-        return value != null ? BigDecimal.valueOf(value) : null;
     }
 }

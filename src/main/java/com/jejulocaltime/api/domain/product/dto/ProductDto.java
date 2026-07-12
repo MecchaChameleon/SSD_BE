@@ -1,5 +1,6 @@
 package com.jejulocaltime.api.domain.product.dto;
 
+import com.jejulocaltime.api.common.util.NumberConversions;
 import com.jejulocaltime.api.domain.product.Product;
 import jakarta.validation.constraints.NotNull;
 
@@ -78,8 +79,8 @@ public class ProductDto {
                     entity.getAvailableStartAt(),
                     entity.getReservationCloseAt(),
                     entity.getFootTrafficLevel(),
-                    entity.getLatitude() != null ? entity.getLatitude().doubleValue() : null,
-                    entity.getLongitude() != null ? entity.getLongitude().doubleValue() : null,
+                    NumberConversions.toDouble(entity.getLatitude()),
+                    NumberConversions.toDouble(entity.getLongitude()),
                     entity.getStatus(),
                     entity.getCreatedAt(),
                     entity.getUpdatedAt()
