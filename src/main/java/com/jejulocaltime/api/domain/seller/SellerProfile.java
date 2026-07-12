@@ -10,7 +10,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "seller_profiles")
+@Table(name = "seller_profile")
 @Getter
 @Setter
 @NoArgsConstructor
