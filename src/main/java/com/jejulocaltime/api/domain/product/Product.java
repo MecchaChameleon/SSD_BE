@@ -58,6 +58,12 @@ public class Product {
 
     private String description;
 
+    // 판매자 상품등록 화면 설계(업종 -> 유형 2단계 드롭다운)에서 "업종"에 해당.
+    // category(유형)와의 궁합은 BusinessType.allows(Category)로 서버에서 검증한다.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "business_type", nullable = false)
+    private BusinessType businessType;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Category category;
@@ -124,12 +130,31 @@ public class Product {
         return this.sellerProfileId != null && this.sellerProfileId.equals(sellerProfileId);
     }
 
-    /** 티켓 스펙 카테고리 (당일재고/빈시간대자원/당일공실/이동관광잔여상품) */
+    /** 티켓 스펙 카테고리 (당일재고/빈시간대자원/당일공실/이동관광잔여상품) — 화면 설계상 "유형"에 해당 */
     public enum Category {
         SAME_DAY_INVENTORY,
         EMPTY_TIME_RESOURCE,
         SAME_DAY_ROOM,
         TOUR_REMAINDER
+    }
+
+    /**
+     * 상품등록 화면 설계의 "업종" 드롭다운 (음식점/숙박/체험/렌탈·모빌리티).
+     * 선택한 업종에 따라 유형(Category) 드롭다운 옵션이 달라진다 — allows()가 그 종속 규칙.
+     * TODO: RENTAL_MOBILITY의 정확한 유형 매핑은 디자인 문서에 명시되어 있지 않아 TOUR_REMAINDER로
+     * 추정 매핑했다. 기획 확정되면 수정 필요.
+     */
+    public enum BusinessType {
+        RESTAURANT, LODGING, EXPERIENCE, RENTAL_MOBILITY;
+
+        public boolean allows(Category category) {
+            return switch (this) {
+                case RESTAURANT -> category == Category.SAME_DAY_INVENTORY || category == Category.EMPTY_TIME_RESOURCE;
+                case LODGING -> category == Category.SAME_DAY_ROOM || category == Category.EMPTY_TIME_RESOURCE;
+                case EXPERIENCE -> category == Category.EMPTY_TIME_RESOURCE;
+                case RENTAL_MOBILITY -> category == Category.TOUR_REMAINDER || category == Category.EMPTY_TIME_RESOURCE;
+            };
+        }
     }
 
     /**

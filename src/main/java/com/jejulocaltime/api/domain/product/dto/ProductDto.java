@@ -11,6 +11,7 @@ public class ProductDto {
     // [POST] 상품/자원 등록
     public record CreateRequest(
             @NotNull String name,
+            @NotNull Product.BusinessType businessType,
             @NotNull Product.Category category,
             Product.EnvironmentType type,
             @NotNull Integer qty,
@@ -19,6 +20,8 @@ public class ProductDto {
             LocalDateTime openTime,
             @NotNull LocalDateTime deadline,
             Product.FootTrafficLevel foot,
+            // address/lat/lng를 안 보내면 판매자 본인 SellerProfile에 등록된 매장 주소로 채워진다.
+            String address,
             Double lat,
             Double lng
     ) {}
@@ -26,6 +29,7 @@ public class ProductDto {
     // [PUT] 상품/자원 수정 (전부 선택적 입력)
     public record UpdateRequest(
             String name,
+            Product.BusinessType businessType,
             Product.Category category,
             Product.EnvironmentType type,
             Integer qty,
@@ -34,6 +38,7 @@ public class ProductDto {
             LocalDateTime openTime,
             LocalDateTime deadline,
             Product.FootTrafficLevel foot,
+            String address,
             Double lat,
             Double lng
     ) {}
@@ -48,6 +53,7 @@ public class ProductDto {
             Long id,
             Long sellerProfileId,
             String name,
+            Product.BusinessType businessType,
             Product.Category category,
             Product.EnvironmentType type,
             Integer totalQty,
@@ -58,6 +64,7 @@ public class ProductDto {
             LocalDateTime openTime,
             LocalDateTime deadline,
             Product.FootTrafficLevel foot,
+            String address,
             Double lat,
             Double lng,
             Product.Status status,
@@ -69,6 +76,7 @@ public class ProductDto {
                     entity.getId(),
                     entity.getSellerProfileId(),
                     entity.getName(),
+                    entity.getBusinessType(),
                     entity.getCategory(),
                     entity.getEnvironmentType(),
                     entity.getTotalQuantity(),
@@ -79,6 +87,7 @@ public class ProductDto {
                     entity.getAvailableStartAt(),
                     entity.getReservationCloseAt(),
                     entity.getFootTrafficLevel(),
+                    entity.getAddress(),
                     NumberConversions.toDouble(entity.getLatitude()),
                     NumberConversions.toDouble(entity.getLongitude()),
                     entity.getStatus(),

@@ -31,10 +31,12 @@ public class ProductService {
     @Transactional
     public ProductDto.Response createProduct(Long userId, ProductDto.CreateRequest request) {
         SellerProfile profile = accessGuard.requireSellerProfile(userId);
+        requireCompatible(request.businessType(), request.category());
 
         Product product = new Product();
         product.setSellerProfileId(profile.getId());
         product.setName(request.name());
+        product.setBusinessType(request.businessType());
         product.setCategory(request.category());
         product.setResourceType(Product.ResourceType.fromCategory(request.category()));
         product.setEnvironmentType(request.type());
@@ -46,8 +48,10 @@ public class ProductService {
         product.setAvailableStartAt(request.openTime());
         product.setReservationCloseAt(request.deadline());
         product.setFootTrafficLevel(request.foot());
-        product.setLatitude(NumberConversions.toBigDecimal(request.lat()));
-        product.setLongitude(NumberConversions.toBigDecimal(request.lng()));
+        // 매장 위치(주소/좌표)를 안 보내면 판매자 본인 SellerProfile에 등록된 매장 정보로 채운다.
+        product.setAddress(request.address() != null ? request.address() : profile.getAddress());
+        product.setLatitude(request.lat() != null ? NumberConversions.toBigDecimal(request.lat()) : profile.getLatitude());
+        product.setLongitude(request.lng() != null ? NumberConversions.toBigDecimal(request.lng()) : profile.getLongitude());
         product.setStatus(Product.Status.ACTIVE);
 
         Product saved = productRepository.save(product);
@@ -60,9 +64,14 @@ public class ProductService {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
 
         if (request.name() != null) product.setName(request.name());
+        if (request.businessType() != null) product.setBusinessType(request.businessType());
         if (request.category() != null) {
             product.setCategory(request.category());
             product.setResourceType(Product.ResourceType.fromCategory(request.category()));
+        }
+        // 업종/유형 중 하나만 바뀌어도 조합이 깨질 수 있어서, 실제로 바뀐 게 있을 때만 최종 조합을 검증한다.
+        if (request.businessType() != null || request.category() != null) {
+            requireCompatible(product.getBusinessType(), product.getCategory());
         }
         if (request.type() != null) product.setEnvironmentType(request.type());
         // qty는 remaining_quantity(판매 가능 수량)만 갱신한다. total_quantity(최초 등록 수량)는 유지.
@@ -75,10 +84,19 @@ public class ProductService {
         if (request.openTime() != null) product.setAvailableStartAt(request.openTime());
         if (request.deadline() != null) product.setReservationCloseAt(request.deadline());
         if (request.foot() != null) product.setFootTrafficLevel(request.foot());
+        if (request.address() != null) product.setAddress(request.address());
         if (request.lat() != null) product.setLatitude(NumberConversions.toBigDecimal(request.lat()));
         if (request.lng() != null) product.setLongitude(NumberConversions.toBigDecimal(request.lng()));
 
         return ProductDto.Response.from(product);
+    }
+
+    private void requireCompatible(Product.BusinessType businessType, Product.Category category) {
+        if (!businessType.allows(category)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "선택한 업종(" + businessType + ")에서는 해당 유형(" + category + ")을 선택할 수 없습니다.");
+        }
     }
 
     // 5. 내 상품/자원 목록 조회
