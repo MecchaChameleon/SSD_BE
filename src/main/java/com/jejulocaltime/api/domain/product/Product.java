@@ -14,6 +14,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -95,11 +96,14 @@ public class Product {
 
     private String address;
 
+    // precision/scale은 DECIMAL(고정소수점) 컬럼에만 의미가 있어서 BigDecimal로 매핑한다.
+    // Double(부동소수점) + precision/scale 조합은 Hibernate 6.5에서
+    // "scale has no meaning for SQL floating point types"로 부팅 자체를 실패시킨다.
     @Column(precision = 10, scale = 7)
-    private Double latitude;
+    private BigDecimal latitude;
 
     @Column(precision = 10, scale = 7)
-    private Double longitude;
+    private BigDecimal longitude;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "foot_traffic_level")

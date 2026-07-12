@@ -78,8 +78,8 @@ public class ProductDto {
                     entity.getAvailableStartAt(),
                     entity.getReservationCloseAt(),
                     entity.getFootTrafficLevel(),
-                    entity.getLatitude(),
-                    entity.getLongitude(),
+                    entity.getLatitude() != null ? entity.getLatitude().doubleValue() : null,
+                    entity.getLongitude() != null ? entity.getLongitude().doubleValue() : null,
                     entity.getStatus(),
                     entity.getCreatedAt(),
                     entity.getUpdatedAt()
