@@ -2,11 +2,12 @@ package com.jejulocaltime.api.domain.seller.dto;
 
 import com.jejulocaltime.api.domain.seller.SellerApplication;
 import java.time.LocalDateTime;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 public class SellerApplicationDto {
 
     // [POST] 입점 신청 요청
-    public record CreateRequest(
+    @Schema(name="SellerApplicationCreateRequest") public record CreateRequest(
             String businessName,
             String businessNumber,
             String representativeName,
@@ -14,7 +15,7 @@ public class SellerApplicationDto {
     ) {}
 
     // [공통] 입점 신청 응답
-    public record Response(
+    @Schema(name="SellerApplicationResponse") public record Response(
             Long id,
             Long userId,
             String businessName,

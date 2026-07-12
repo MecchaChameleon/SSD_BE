@@ -12,6 +12,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import com.jejulocaltime.api.repository.UserRepository;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -19,9 +20,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String PREFIX = "Bearer ";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -35,7 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(PREFIX.length());
             if (jwtTokenProvider.isValid(token)) {
                 Long userId = jwtTokenProvider.getUserId(token);
-                String role = jwtTokenProvider.getRole(token);
+                // 권한은 토큰 발급 시점 값이 아니라 DB의 최신 역할을 사용한다.
+                // 입점 승인 직후 재로그인하지 않아도 SELLER API를 사용할 수 있다.
+                String role = userRepository.findById(userId).map(user -> user.getRole().name()).orElse("USER");
                 var authentication = new UsernamePasswordAuthenticationToken(
                         userId, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
