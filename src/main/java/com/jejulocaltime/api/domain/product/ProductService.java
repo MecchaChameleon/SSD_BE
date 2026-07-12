@@ -2,6 +2,7 @@ package com.jejulocaltime.api.domain.product;
 
 import com.jejulocaltime.api.common.exception.BusinessException;
 import com.jejulocaltime.api.common.exception.ErrorCode;
+import com.jejulocaltime.api.common.util.NumberConversions;
 import com.jejulocaltime.api.domain.product.dto.ProductDto;
 import com.jejulocaltime.api.domain.reservation.Reservation;
 import com.jejulocaltime.api.domain.reservation.ReservationRepository;
@@ -12,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -46,8 +46,8 @@ public class ProductService {
         product.setAvailableStartAt(request.openTime());
         product.setReservationCloseAt(request.deadline());
         product.setFootTrafficLevel(request.foot());
-        product.setLatitude(toBigDecimal(request.lat()));
-        product.setLongitude(toBigDecimal(request.lng()));
+        product.setLatitude(NumberConversions.toBigDecimal(request.lat()));
+        product.setLongitude(NumberConversions.toBigDecimal(request.lng()));
         product.setStatus(Product.Status.ACTIVE);
 
         Product saved = productRepository.save(product);
@@ -75,14 +75,10 @@ public class ProductService {
         if (request.openTime() != null) product.setAvailableStartAt(request.openTime());
         if (request.deadline() != null) product.setReservationCloseAt(request.deadline());
         if (request.foot() != null) product.setFootTrafficLevel(request.foot());
-        if (request.lat() != null) product.setLatitude(toBigDecimal(request.lat()));
-        if (request.lng() != null) product.setLongitude(toBigDecimal(request.lng()));
+        if (request.lat() != null) product.setLatitude(NumberConversions.toBigDecimal(request.lat()));
+        if (request.lng() != null) product.setLongitude(NumberConversions.toBigDecimal(request.lng()));
 
         return ProductDto.Response.from(product);
-    }
-
-    private BigDecimal toBigDecimal(Double value) {
-        return value != null ? BigDecimal.valueOf(value) : null;
     }
 
     // 5. 내 상품/자원 목록 조회

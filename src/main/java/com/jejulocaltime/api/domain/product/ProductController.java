@@ -125,7 +125,7 @@ public class ProductController {
 
     // 8. 상품 이미지 업로드
     @Operation(summary = "상품 이미지 업로드", description = "본인 상품에 이미지를 업로드하고 업로드된 이미지 URL 목록을 반환한다.")
-    @PostMapping(value = "/{productId}/images")
+    @PostMapping("/{productId}/images")
     public ResponseEntity<ApiResponseTemplate<ProductImageDto.UploadResponse>> uploadImages(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long productId,
