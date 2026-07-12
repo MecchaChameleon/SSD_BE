@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -40,11 +41,14 @@ public class SellerProfile {
     // 사장님이 직접 등록/수정할 가게 및 정산 정보
     private String address;
     
+    // precision/scale은 DECIMAL(고정소수점) 컬럼에만 의미가 있어서 Double(부동소수점) 대신
+    // BigDecimal로 매핑해야 한다. Double + precision/scale 조합은 Hibernate 6.5에서
+    // "scale has no meaning for SQL floating point types"로 부팅 자체가 실패한다.
     @Column(precision = 10, scale = 7)
-    private Double latitude;
-    
+    private BigDecimal latitude;
+
     @Column(precision = 10, scale = 7)
-    private Double longitude;
+    private BigDecimal longitude;
 
     private String bankName;
     private String accountNumber;
