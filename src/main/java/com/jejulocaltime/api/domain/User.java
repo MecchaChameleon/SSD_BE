@@ -79,7 +79,13 @@ public class User {
         return createdAt;
     }
 
+    //  판매자 승격 메서드 추가
+    public void promoteToSeller() {
+        this.role = Role.SELLER;
+    }
+    
+    //  SELLER 권한 추가
     public enum Role {
-        USER, ADMIN
+        USER, SELLER, ADMIN
     }
 }

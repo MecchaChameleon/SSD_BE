@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -39,6 +40,17 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
+                        
+                        // 입점 신청 도메인: 로그인한 유저 누구나 접근 가능 (USER 권한)
+                        .requestMatchers("/api/seller/application/**").authenticated()
+                        
+                        // 판매자 프로필 도메인: 승인된 판매자만 접근 가능 (SELLER 권한)
+                        .requestMatchers(HttpMethod.GET, "/api/seller/profile").hasRole("SELLER")
+                        .requestMatchers(HttpMethod.PUT, "/api/seller/profile").hasRole("SELLER")
+
+                        // 관리자(ADMIN) 전용 API: ADMIN 권한만 접근 가능
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
