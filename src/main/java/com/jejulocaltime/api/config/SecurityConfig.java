@@ -1,15 +1,20 @@
 package com.jejulocaltime.api.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jejulocaltime.api.auth.JwtAuthenticationFilter;
 import com.jejulocaltime.api.auth.JwtTokenProvider;
+import com.jejulocaltime.api.common.exception.ErrorCode;
+import com.jejulocaltime.api.common.exception.ErrorResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -48,13 +53,32 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/seller/profile").hasRole("SELLER")
                         .requestMatchers(HttpMethod.PUT, "/api/seller/profile").hasRole("SELLER")
 
+                        // 판매자 상품/자원 관리 도메인 (SEL-01~04): 승인된 판매자만 접근 가능 (SELLER 권한)
+                        .requestMatchers("/api/seller/products/**").hasRole("SELLER")
+
                         // 관리자(ADMIN) 전용 API: ADMIN 권한만 접근 가능
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated())
+                .exceptionHandling(exception -> exception.accessDeniedHandler(accessDeniedHandler()))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    // role이 요구 조건(hasRole 등)을 만족하지 못해 거부될 때, 다른 도메인 예외와 동일한
+    // ErrorResponse(ErrorCode.ACCESS_DENIED) 포맷으로 응답을 내려주기 위한 핸들러
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        return (request, response, ex) -> {
+            response.setStatus(ErrorCode.ACCESS_DENIED.getStatus().value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            String body = objectMapper.writeValueAsString(
+                    ErrorResponse.of(ErrorCode.ACCESS_DENIED, ErrorCode.ACCESS_DENIED.getDefaultMessage()));
+            response.getWriter().write(body);
+        };
     }
 
     @Bean
