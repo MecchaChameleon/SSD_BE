@@ -54,9 +54,10 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ProductDto.CreateRequest request = new ProductDto.CreateRequest(
-                "흑돼지 당일 특가", Product.Category.SAME_DAY_INVENTORY, Product.EnvironmentType.INDOOR,
+                "흑돼지 당일 특가", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
+                Product.EnvironmentType.INDOOR,
                 10, 20000, 12000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
-                Product.FootTrafficLevel.HIGH, 33.45, 126.56
+                Product.FootTrafficLevel.HIGH, "제주시 어딘가", 33.45, 126.56
         );
 
         ProductDto.Response response = productService.createProduct(USER_ID, request);
@@ -69,6 +70,43 @@ class ProductServiceTest {
     }
 
     @Test
+    void 업종에서_허용하지_않는_유형이면_등록이_거부된다() {
+        when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
+
+        // LODGING(숙박)은 SAME_DAY_INVENTORY(당일재고)를 허용하지 않는다.
+        ProductDto.CreateRequest request = new ProductDto.CreateRequest(
+                "잘못된 조합", Product.BusinessType.LODGING, Product.Category.SAME_DAY_INVENTORY,
+                Product.EnvironmentType.INDOOR,
+                10, 20000, 12000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
+                Product.FootTrafficLevel.HIGH, null, null, null
+        );
+
+        assertThatThrownBy(() -> productService.createProduct(USER_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_REQUEST);
+    }
+
+    @Test
+    void 매장_위치를_안_보내면_판매자_프로필_주소로_채워진다() {
+        SellerProfile profile = sellerProfile();
+        profile.setAddress("제주시 노형동 123");
+        when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(profile));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductDto.CreateRequest request = new ProductDto.CreateRequest(
+                "흑돼지 당일 특가", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
+                Product.EnvironmentType.INDOOR,
+                10, 20000, 12000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
+                Product.FootTrafficLevel.HIGH, null, null, null
+        );
+
+        ProductDto.Response response = productService.createProduct(USER_ID, request);
+
+        assertThat(response.address()).isEqualTo("제주시 노형동 123");
+    }
+
+    @Test
     void 상품_수정시_qty를_보내면_remaining_quantity만_바뀌고_total_quantity는_유지된다() {
         Product product = ownedProduct();
         product.setTotalQuantity(10);
@@ -78,7 +116,7 @@ class ProductServiceTest {
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
         ProductDto.UpdateRequest request = new ProductDto.UpdateRequest(
-                null, null, null, 3, null, null, null, null, null, null, null);
+                null, null, null, null, 3, null, null, null, null, null, null, null, null);
 
         ProductDto.Response response = productService.updateProduct(USER_ID, PRODUCT_ID, request);
 
