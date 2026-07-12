@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,5 +41,14 @@ public class AuthController {
         return userRepository.findById(userId)
                 .map(MeResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+    }
+
+    @DeleteMapping("/me")
+    @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.NO_CONTENT)
+    public void withdraw(@AuthenticationPrincipal Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+        }
+        userRepository.deleteById(userId);
     }
 }
