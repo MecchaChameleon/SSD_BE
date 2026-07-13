@@ -1,5 +1,9 @@
 package com.jejulocaltime.api.common.response;
 
+import com.jejulocaltime.api.common.exception.BusinessException;
+import com.jejulocaltime.api.common.exception.ErrorCode;
+import com.jejulocaltime.api.controller.GlobalExceptionHandler;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 

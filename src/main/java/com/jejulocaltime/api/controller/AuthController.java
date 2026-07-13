@@ -1,10 +1,11 @@
 package com.jejulocaltime.api.controller;
 
-import com.jejulocaltime.api.auth.kakao.KakaoAuthService;
-import com.jejulocaltime.api.controller.dto.KakaoLoginRequest;
-import com.jejulocaltime.api.controller.dto.LoginResponse;
-import com.jejulocaltime.api.controller.dto.MeResponse;
+import com.jejulocaltime.api.dto.KakaoLoginRequest;
+import com.jejulocaltime.api.dto.LoginResponse;
+import com.jejulocaltime.api.dto.MeResponse;
 import com.jejulocaltime.api.repository.UserRepository;
+import com.jejulocaltime.api.service.KakaoAuthService;
+
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;

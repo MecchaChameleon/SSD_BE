@@ -1,10 +1,11 @@
 package com.jejulocaltime.api.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jejulocaltime.api.auth.JwtAuthenticationFilter;
 import com.jejulocaltime.api.auth.JwtTokenProvider;
 import com.jejulocaltime.api.common.exception.ErrorCode;
 import com.jejulocaltime.api.common.exception.ErrorResponse;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
