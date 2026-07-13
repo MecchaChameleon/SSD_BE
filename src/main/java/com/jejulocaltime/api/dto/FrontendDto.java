@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import com.jejulocaltime.api.dto.FrontendDto.ReservationCounts;
+
 public final class FrontendDto {
     private FrontendDto() {}
 
@@ -26,8 +28,9 @@ public final class FrontendDto {
             Long buyerId, String buyerNickname, Integer quantity, Integer unitPrice, Integer totalAmount,
             OffsetDateTime visitStartAt, OffsetDateTime visitEndAt, String status, String rejectReason,
             OffsetDateTime requestedAt) {}
+            // 수수료 5%가 차감된 누적 정산금(unsettledAmount) 필드 반영
     public record DashboardResponse(LocalDate date, ReservationCounts reservationCounts, long dailyRevenue,
-            long periodRevenue, long registeredProductCount) {}
+            long unsettledAmount, long registeredProductCount) {}
     public record ReservationCounts(long requested, long approved, long noShow) {}
     public record SalesItem(Long productId, String productName, long quantity, long revenue) {}
     public record SalesReportResponse(LocalDate startDate, LocalDate endDate, long totalRevenue, long totalQuantity, List<SalesItem> items) {}
