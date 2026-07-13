@@ -14,6 +14,10 @@ public final class FrontendDto {
             OffsetDateTime openTime, OffsetDateTime deadline, String address, Double lat, Double lng,
             Boolean urgent, String aiInsight, List<String> imageUrls, String status,
             OffsetDateTime createdAt, OffsetDateTime updatedAt, Boolean wishlisted) {}
+    // 지도 핀 표시용 경량 응답. 위경도가 등록된 판매중 상품만 대상으로 한다.
+    public record MapPinResponse(Long id, String name, String businessName, String category,
+            Integer price, Integer currentPrice, Double discountRate,
+            Double lat, Double lng, String address, OffsetDateTime deadline, Boolean urgent) {}
     public record PurchaseRequest(Long productId, Integer quantity) {}
     public record ReservationCreateRequest(Long productId, Integer quantity, OffsetDateTime visitStartAt, OffsetDateTime visitEndAt) {}
     public record CancelRequest(String reason) {}
