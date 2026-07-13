@@ -104,6 +104,17 @@ public class ProductService {
         if (request.address() != null) product.setAddress(request.address());
         if (request.lat() != null) product.setLatitude(NumberConversions.toBigDecimal(request.lat()));
         if (request.lng() != null) product.setLongitude(NumberConversions.toBigDecimal(request.lng()));
+        if (request.status() != null) {
+            if (request.status() == Product.Status.ACTIVE) {
+                if (product.getRemainingQuantity() == null || product.getRemainingQuantity() <= 0) {
+                    throw new BusinessException(ErrorCode.INVALID_REQUEST, "판매중으로 변경하려면 수량이 1개 이상이어야 합니다.");
+                }
+                if (product.getReservationCloseAt() == null || !product.getReservationCloseAt().isAfter(LocalDateTime.now())) {
+                    throw new BusinessException(ErrorCode.INVALID_REQUEST, "판매중으로 변경하려면 마감 시각이 현재보다 이후여야 합니다.");
+                }
+            }
+            product.setStatus(request.status());
+        }
 
         return ProductDto.Response.from(product);
     }

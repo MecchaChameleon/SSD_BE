@@ -153,7 +153,7 @@ class ProductServiceTest {
         // 시작 now+5h / 종료 now+1h 로 함께 수정 -> 뒤집힌 기간이라 거부
         ProductDto.UpdateRequest request = new ProductDto.UpdateRequest(
                 null, null, null, null, null, null, null,
-                LocalDateTime.now().plusHours(5), LocalDateTime.now().plusHours(1), null, null, null, null);
+                LocalDateTime.now().plusHours(5), LocalDateTime.now().plusHours(1), null, null, null, null, null);
 
         assertThatThrownBy(() -> productService.updateProduct(USER_ID, PRODUCT_ID, request))
                 .isInstanceOf(BusinessException.class)
@@ -168,7 +168,7 @@ class ProductServiceTest {
 
         // 최고금액 10000 / 최소금액 20000 으로 함께 수정 -> 뒤집힌 조합이라 거부
         ProductDto.UpdateRequest request = new ProductDto.UpdateRequest(
-                null, null, null, null, null, 10000, 20000, null, null, null, null, null, null);
+                null, null, null, null, null, 10000, 20000, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> productService.updateProduct(USER_ID, PRODUCT_ID, request))
                 .isInstanceOf(BusinessException.class)
@@ -186,7 +186,7 @@ class ProductServiceTest {
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
         ProductDto.UpdateRequest request = new ProductDto.UpdateRequest(
-                null, null, null, null, 3, null, null, null, null, null, null, null, null);
+                null, null, null, null, 3, null, null, null, null, null, null, null, null, null);
 
         ProductDto.Response response = productService.updateProduct(USER_ID, PRODUCT_ID, request);
 
