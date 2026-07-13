@@ -65,6 +65,31 @@ public class FrontendApiService {
         Long total=jdbc.queryForObject(countSql.toString(),Long.class,countArgs.toArray());
         return new PageResponse<>(content,page,size,total==null?0:total,(int)Math.ceil((total==null?0:total)/(double)size),(page+1)*size>=(total==null?0:total));
     }
+
+    private final RowMapper<MapPinResponse> mapPinMapper=(rs,n)->new MapPinResponse(
+            rs.getLong("id"),rs.getString("name"),rs.getString("business_name"),rs.getString("category"),
+            rs.getInt("original_price"),rs.getInt("current_price"),
+            rs.getInt("original_price")==0?0d:Math.round((1-rs.getDouble("current_price")/rs.getDouble("original_price"))*1000)/10d,
+            decimal(rs,"latitude"),decimal(rs,"longitude"),rs.getString("address"),
+            time(rs,"reservation_close_at"),time(rs,"reservation_close_at").isBefore(OffsetDateTime.now().plusHours(1)));
+
+    // 지도에 표시할 판매중 상품 핀 목록. 위경도가 없는 상품은 지도에 찍을 수 없으므로 제외한다.
+    // swLat/swLng/neLat/neLng(지도 뷰포트 좌하단·우상단 좌표)를 모두 보내면 그 범위 안의 상품만 반환한다.
+    public List<MapPinResponse> mapPins(Double swLat,Double swLng,Double neLat,Double neLng){
+        var sql=new StringBuilder("""
+            SELECT p.id,p.name,sp.business_name,p.category,p.original_price,p.current_price,
+                   p.latitude,p.longitude,p.address,p.reservation_close_at
+            FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
+            WHERE p.status='ACTIVE' AND p.reservation_close_at>now()
+              AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
+            """);
+        var args=new ArrayList<Object>();
+        if(swLat!=null&&swLng!=null&&neLat!=null&&neLng!=null){
+            sql.append(" AND p.latitude BETWEEN ? AND ? AND p.longitude BETWEEN ? AND ?");
+            args.add(swLat);args.add(neLat);args.add(swLng);args.add(neLng);
+        }
+        return jdbc.query(sql.toString(),mapPinMapper,args.toArray());
+    }
     public ProductResponse product(Long userId,Long id){try{return jdbc.queryForObject(productSelect()+" WHERE p.id=?",productMapper,userId==null?-1L:userId,id);}catch(EmptyResultDataAccessException e){throw new ResponseStatusException(NOT_FOUND,"상품을 찾을 수 없습니다.");}}
 
     @Transactional

@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,6 +26,12 @@ public class FrontendApiController {
             @RequestParam(required=false)String category,@RequestParam(required=false)String sort,
             @RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="10")int size){return ApiResponseTemplate.success(service.products(userId,query,businessType,category,sort,page,Math.min(size,50)));}
     @GetMapping("/api/products/{id}") public ResponseEntity<ApiResponseTemplate<ProductResponse>> product(@AuthenticationPrincipal Long userId,@PathVariable Long id){return ApiResponseTemplate.success(service.product(userId,id));}
+    // 지도에 판매중 상품 핀을 뿌리기 위한 API. 뷰포트 좌표(swLat/swLng/neLat/neLng)를 모두 보내면 그 범위 안의 상품만 반환한다.
+    @GetMapping("/api/products/map") public ResponseEntity<ApiResponseTemplate<List<MapPinResponse>>> productsMap(
+            @RequestParam(required=false)Double swLat,@RequestParam(required=false)Double swLng,
+            @RequestParam(required=false)Double neLat,@RequestParam(required=false)Double neLng){
+        return ApiResponseTemplate.success(service.mapPins(swLat,swLng,neLat,neLng));
+    }
 
     @PostMapping("/api/buyer/purchases") public ResponseEntity<ApiResponseTemplate<ReservationResponse>> purchase(@AuthenticationPrincipal Long userId,@RequestBody PurchaseRequest body){return ApiResponseTemplate.success(service.purchase(userId,body));}
     @PostMapping("/api/buyer/reservations") public ResponseEntity<ApiResponseTemplate<ReservationResponse>> reserve(@AuthenticationPrincipal Long userId,@RequestBody ReservationCreateRequest body){return ApiResponseTemplate.success(service.reserve(userId,body));}

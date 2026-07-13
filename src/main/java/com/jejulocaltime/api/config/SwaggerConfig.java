@@ -42,6 +42,7 @@ public class SwaggerConfig {
         Map<String, String> summaries = Map.ofEntries(
                 Map.entry("/api/products", "판매 상품 목록 조회"),
                 Map.entry("/api/products/{id}", "판매 상품 상세 조회"),
+                Map.entry("/api/products/map", "지도용 판매 상품 위치 목록 조회"),
                 Map.entry("/api/buyer/purchases", "상품 즉시 구매"),
                 Map.entry("/api/buyer/reservations", "구매자 예약 생성·목록 조회"),
                 Map.entry("/api/buyer/reservations/{id}", "구매자 예약 상세 조회"),
