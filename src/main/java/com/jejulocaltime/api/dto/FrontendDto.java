@@ -25,12 +25,13 @@ public final class FrontendDto {
     public record ReservationResponse(Long id, Long productId, String productName, String businessName,
             Long buyerId, String buyerNickname, Integer quantity, Integer unitPrice, Integer totalAmount,
             OffsetDateTime visitStartAt, OffsetDateTime visitEndAt, String status, String rejectReason,
-            OffsetDateTime requestedAt) {}
+            OffsetDateTime requestedAt, String paymentStatus) {}
     public record DashboardResponse(LocalDate date, ReservationCounts reservationCounts, long dailyRevenue,
             long periodRevenue, long registeredProductCount) {}
     public record ReservationCounts(long requested, long approved, long noShow) {}
     public record SalesItem(Long productId, String productName, long quantity, long revenue) {}
-    public record SalesReportResponse(LocalDate startDate, LocalDate endDate, long totalRevenue, long totalQuantity, List<SalesItem> items) {}
+    public record SalesReportResponse(LocalDate startDate, LocalDate endDate, long totalRevenue,
+            long settlementRevenue, long totalQuantity, List<SalesItem> items) {}
     public record PriceApplyRequest(Integer price, Long recommendationId) {}
     public record UserUpdateRequest(String nickname, String profileImageUrl) {}
     public record NotificationResponse(Long id, String type, String title, String message, String referenceType,
