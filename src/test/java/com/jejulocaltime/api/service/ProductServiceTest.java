@@ -128,6 +128,40 @@ class ProductServiceTest {
     }
 
     @Test
+    void 등록시_판매시작시간이_종료시간보다_뒤면_거부된다() {
+        when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
+
+        // openTime(시작) = now+3h, deadline(종료) = now+1h -> 시작이 종료보다 뒤
+        ProductDto.CreateRequest request = new ProductDto.CreateRequest(
+                "시간 뒤집힘", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
+                Product.EnvironmentType.INDOOR,
+                10, 20000, 12000, LocalDateTime.now().plusHours(3), LocalDateTime.now().plusHours(1),
+                Product.FootTrafficLevel.HIGH, null, null, null
+        );
+
+        assertThatThrownBy(() -> productService.createProduct(USER_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_REQUEST);
+    }
+
+    @Test
+    void 수정시_판매시작시간이_종료시간보다_뒤면_거부된다() {
+        when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(ownedProduct()));
+
+        // 시작 now+5h / 종료 now+1h 로 함께 수정 -> 뒤집힌 기간이라 거부
+        ProductDto.UpdateRequest request = new ProductDto.UpdateRequest(
+                null, null, null, null, null, null, null,
+                LocalDateTime.now().plusHours(5), LocalDateTime.now().plusHours(1), null, null, null, null);
+
+        assertThatThrownBy(() -> productService.updateProduct(USER_ID, PRODUCT_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_REQUEST);
+    }
+
+    @Test
     void 수정시_최소금액이_최고금액보다_높으면_거부된다() {
         when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(ownedProduct()));
