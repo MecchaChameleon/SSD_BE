@@ -24,7 +24,11 @@ public class FrontendApiService {
     private final JdbcTemplate jdbc;
 
     private static OffsetDateTime time(ResultSet rs, String column) throws SQLException {
-        var value=rs.getObject(column, OffsetDateTime.class); return value;
+        return rs.getObject(column, OffsetDateTime.class);
+    }
+    private static Double decimal(ResultSet rs, String column) throws SQLException {
+        Number value = (Number) rs.getObject(column);
+        return value == null ? null : value.doubleValue();
     }
     private final RowMapper<ProductResponse> productMapper=(rs,n)->new ProductResponse(
             rs.getLong("id"),rs.getLong("seller_profile_id"),rs.getString("name"),rs.getString("business_name"),
@@ -33,7 +37,7 @@ public class FrontendApiService {
             rs.getInt("minimum_price"),rs.getInt("current_price"),
             rs.getInt("original_price")==0?0d:Math.round((1-rs.getDouble("current_price")/rs.getDouble("original_price"))*1000)/10d,
             time(rs,"available_start_at"),time(rs,"reservation_close_at"),rs.getString("address"),
-            rs.getObject("latitude",Double.class),rs.getObject("longitude",Double.class),
+            decimal(rs,"latitude"),decimal(rs,"longitude"),
             time(rs,"reservation_close_at").isBefore(OffsetDateTime.now().plusHours(1)),null,List.of(),rs.getString("status"),
             time(rs,"created_at"),time(rs,"updated_at"),rs.getBoolean("wishlisted"));
 
@@ -52,7 +56,12 @@ public class FrontendApiService {
         String order=switch(sort==null?"":sort){case "DEADLINE_ASC"->"p.reservation_close_at ASC";case "DISCOUNT_DESC"->"(p.original_price-p.current_price) DESC";case "PRICE_ASC"->"p.current_price ASC";default->"p.created_at DESC";};
         sql.append("ORDER BY ").append(order).append(" LIMIT ? OFFSET ?");args.add(size);args.add(page*size);
         var content=jdbc.query(sql.toString(),productMapper,args.toArray());
-        Long total=jdbc.queryForObject("SELECT count(*) FROM product WHERE status='ACTIVE' AND reservation_close_at>now()",Long.class);
+        var countSql=new StringBuilder("SELECT count(*) FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.status='ACTIVE' AND p.reservation_close_at>now() ");
+        var countArgs=new ArrayList<Object>();
+        if(query!=null&&!query.isBlank()){countSql.append("AND (lower(p.name) LIKE lower(?) OR lower(sp.business_name) LIKE lower(?)) ");countArgs.add("%"+query+"%");countArgs.add("%"+query+"%");}
+        if(businessType!=null){countSql.append("AND p.business_type=? ");countArgs.add(businessType);}
+        if(category!=null){countSql.append("AND p.category=? ");countArgs.add(category);}
+        Long total=jdbc.queryForObject(countSql.toString(),Long.class,countArgs.toArray());
         return new PageResponse<>(content,page,size,total==null?0:total,(int)Math.ceil((total==null?0:total)/(double)size),(page+1)*size>=(total==null?0:total));
     }
     public ProductResponse product(Long userId,Long id){try{return jdbc.queryForObject(productSelect()+" WHERE p.id=?",productMapper,userId==null?-1L:userId,id);}catch(EmptyResultDataAccessException e){throw new ResponseStatusException(NOT_FOUND,"상품을 찾을 수 없습니다.");}}
