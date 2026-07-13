@@ -81,7 +81,10 @@ public class ProductService {
         }
         if (request.type() != null) product.setEnvironmentType(request.type());
         // qty는 remaining_quantity(판매 가능 수량)만 갱신한다. total_quantity(최초 등록 수량)는 유지.
-        if (request.qty() != null) product.setRemainingQuantity(request.qty());
+        if (request.qty() != null) {
+            product.setRemainingQuantity(request.qty());
+            if (request.qty() <= 0) product.setStatus(Product.Status.PAUSED);
+        }
         if (request.price() != null) {
             product.setOriginalPrice(request.price());
             product.setCurrentPrice(request.price());
