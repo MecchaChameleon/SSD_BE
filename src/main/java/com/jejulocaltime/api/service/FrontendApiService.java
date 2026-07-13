@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import static org.springframework.http.HttpStatus.*;
 
 @Service
@@ -103,7 +104,19 @@ public class FrontendApiService {
     private long count(String sql,Object...args){Long v=jdbc.queryForObject(sql,Long.class,args);return v==null?0:v;}
 
     public void updateUser(Long userId,UserUpdateRequest request){jdbc.update("UPDATE users SET nickname=COALESCE(?,nickname),profile_image_url=COALESCE(?,profile_image_url),updated_at=now() WHERE id=?",request.nickname(),request.profileImageUrl(),userId);}
-    public ProductResponse applyPrice(Long userId,Long productId,PriceApplyRequest request){sellerProfileId(userId);jdbc.update("UPDATE product p SET current_price=?,updated_at=now() FROM seller_profile sp WHERE p.seller_profile_id=sp.id AND sp.user_id=? AND p.id=?",request.price(),userId,productId);return product(userId,productId);}
+    @Transactional public ProductResponse applyPrice(Long userId,Long productId,PriceApplyRequest request){
+        sellerProfileId(userId);
+        if(request.price()==null||request.price()<1)throw new ResponseStatusException(BAD_REQUEST,"적용 가격은 1원 이상이어야 합니다.");
+        // 본인 상품의 최소/최고금액을 먼저 조회(소유권 확인 겸)한 뒤, 적용 가격이 그 범위 안인지 검증한다.
+        Map<String,Object> price;
+        try{price=jdbc.queryForMap("SELECT p.minimum_price,p.original_price FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE sp.user_id=? AND p.id=?",userId,productId);}
+        catch(EmptyResultDataAccessException e){throw new ResponseStatusException(NOT_FOUND,"상품을 찾을 수 없습니다.");}
+        int min=((Number)price.get("minimum_price")).intValue(),max=((Number)price.get("original_price")).intValue();
+        if(request.price()<min)throw new ResponseStatusException(BAD_REQUEST,"적용 가격("+request.price()+")은 최소금액("+min+")보다 낮을 수 없습니다.");
+        if(request.price()>max)throw new ResponseStatusException(BAD_REQUEST,"적용 가격("+request.price()+")은 최고금액("+max+")보다 높을 수 없습니다.");
+        jdbc.update("UPDATE product SET current_price=?,updated_at=now() WHERE id=?",request.price(),productId);
+        return product(userId,productId);
+    }
 
     public PageResponse<NotificationResponse> notifications(Long userId,String filter,int page,int size){String unread="UNREAD".equals(filter)?" AND NOT is_read":"";var list=jdbc.query("SELECT * FROM notification WHERE user_id=?"+unread+" ORDER BY created_at DESC LIMIT ? OFFSET ?",(r,n)->new NotificationResponse(r.getLong("id"),r.getString("type"),r.getString("title"),r.getString("message"),r.getString("reference_type"),r.getObject("reference_id",Long.class),r.getBoolean("is_read"),time(r,"created_at")),userId,size,page*size);long total=count("SELECT count(*) FROM notification WHERE user_id=?"+unread,userId);return page(list,page,size,total);}
     public void readNotification(Long userId,Long id){jdbc.update("UPDATE notification SET is_read=true,read_at=now() WHERE id=? AND user_id=?",id,userId);}
