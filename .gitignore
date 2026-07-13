@@ -5,3 +5,9 @@ out/
 *.iml
 .DS_Store
 .env
+.jdk21/
+.jdk21.zip
+
+# build output / runtime logs
+bin/
+*.log

@@ -4,13 +4,14 @@ import com.jejulocaltime.api.common.util.NumberConversions;
 import com.jejulocaltime.api.domain.Product;
 
 import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 
 public class ProductDto {
 
     // [POST] 상품/자원 등록
-    public record CreateRequest(
+    @Schema(name="ProductCreateRequest") public record CreateRequest(
             @NotNull String name,
             @NotNull Product.BusinessType businessType,
             @NotNull Product.Category category,
@@ -28,7 +29,7 @@ public class ProductDto {
     ) {}
 
     // [PUT] 상품/자원 수정 (전부 선택적 입력)
-    public record UpdateRequest(
+    @Schema(name="ProductUpdateRequest") public record UpdateRequest(
             String name,
             Product.BusinessType businessType,
             Product.Category category,
@@ -50,7 +51,7 @@ public class ProductDto {
     ) {}
 
     // [공통] 상품/자원 응답
-    public record Response(
+    @Schema(name="ProductResponse") public record Response(
             Long id,
             Long sellerProfileId,
             String name,

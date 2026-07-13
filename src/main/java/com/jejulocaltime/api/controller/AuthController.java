@@ -7,6 +7,7 @@ import com.jejulocaltime.api.repository.UserRepository;
 import com.jejulocaltime.api.service.KakaoAuthService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,12 +33,14 @@ public class AuthController {
     }
 
     @PostMapping("/kakao")
+    @Operation(summary = "카카오 로그인", description = "카카오 액세스 토큰을 검증하고 서비스 JWT와 회원 정보를 반환합니다. 최초 로그인 회원은 isNewUser=true로 반환됩니다.")
     public LoginResponse loginWithKakao(@Valid @RequestBody KakaoLoginRequest request) {
         KakaoAuthService.KakaoLoginResult result = kakaoAuthService.loginWithKakaoAccessToken(request.accessToken());
         return LoginResponse.of(result.jwt(), result.user(), result.isNewUser());
     }
 
     @GetMapping("/me")
+    @Operation(summary = "내 회원 정보 조회", description = "서비스 JWT로 인증된 현재 회원의 기본 프로필과 권한을 조회합니다.")
     public MeResponse me(@AuthenticationPrincipal Long userId) {
         return userRepository.findById(userId)
                 .map(MeResponse::from)
@@ -45,6 +48,7 @@ public class AuthController {
     }
 
     @DeleteMapping("/me")
+    @Operation(summary = "회원 탈퇴", description = "현재 회원과 연관된 판매자, 상품, 예약 데이터를 함께 삭제합니다. 성공 시 응답 본문 없이 204를 반환합니다.")
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.NO_CONTENT)
     public void withdraw(@AuthenticationPrincipal Long userId) {
         if (!userRepository.existsById(userId)) {

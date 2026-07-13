@@ -21,6 +21,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import com.jejulocaltime.api.repository.UserRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -37,7 +38,7 @@ public class SecurityConfig {
     };
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider, UserRepository userRepository) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
@@ -51,18 +52,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/seller/application/**").authenticated()
                         
                         // 판매자 프로필 도메인: 승인된 판매자만 접근 가능 (SELLER 권한)
-                        .requestMatchers(HttpMethod.GET, "/api/seller/profile").hasRole("SELLER")
-                        .requestMatchers(HttpMethod.PUT, "/api/seller/profile").hasRole("SELLER")
+                        .requestMatchers("/api/seller/profile/**").hasRole("SELLER")
 
                         // 판매자 상품/자원 관리 도메인 (SEL-01~04): 승인된 판매자만 접근 가능 (SELLER 권한)
                         .requestMatchers("/api/seller/products/**").hasRole("SELLER")
+                        .requestMatchers("/api/seller/**").hasRole("SELLER")
 
                         // 관리자(ADMIN) 전용 API: ADMIN 권한만 접근 가능
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception.accessDeniedHandler(accessDeniedHandler()))
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userRepository), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
