@@ -35,6 +35,7 @@ public class ProductService {
     public ProductDto.Response createProduct(Long userId, ProductDto.CreateRequest request) {
         SellerProfile profile = accessGuard.requireSellerProfile(userId);
         requireCompatible(request.businessType(), request.category());
+        requireValidPriceRange(request.price(), request.minPrice());
 
         Product product = new Product();
         product.setSellerProfileId(profile.getId());
@@ -84,6 +85,10 @@ public class ProductService {
             product.setCurrentPrice(request.price());
         }
         if (request.minPrice() != null) product.setMinimumPrice(request.minPrice());
+        // 최고금액/최소금액 중 하나라도 바뀌면 최종 조합(최소금액 <= 최고금액)을 검증한다.
+        if (request.price() != null || request.minPrice() != null) {
+            requireValidPriceRange(product.getOriginalPrice(), product.getMinimumPrice());
+        }
         if (request.openTime() != null) product.setAvailableStartAt(request.openTime());
         if (request.deadline() != null) product.setReservationCloseAt(request.deadline());
         if (request.foot() != null) product.setFootTrafficLevel(request.foot());
@@ -99,6 +104,15 @@ public class ProductService {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
                     "선택한 업종(" + businessType + ")에서는 해당 유형(" + category + ")을 선택할 수 없습니다.");
+        }
+    }
+
+    // 최소금액(minimumPrice)은 최고금액(originalPrice)보다 높을 수 없다.
+    private void requireValidPriceRange(Integer originalPrice, Integer minPrice) {
+        if (originalPrice != null && minPrice != null && minPrice > originalPrice) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "최소금액(" + minPrice + ")은 최고금액(" + originalPrice + ")보다 높을 수 없습니다.");
         }
     }
 

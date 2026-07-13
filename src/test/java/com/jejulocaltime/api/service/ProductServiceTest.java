@@ -110,6 +110,39 @@ class ProductServiceTest {
     }
 
     @Test
+    void 등록시_최소금액이_최고금액보다_높으면_거부된다() {
+        when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
+
+        // price(최고금액)=10000 < minPrice(최소금액)=20000 -> 잘못된 가격 조합
+        ProductDto.CreateRequest request = new ProductDto.CreateRequest(
+                "가격 뒤집힘", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
+                Product.EnvironmentType.INDOOR,
+                10, 10000, 20000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
+                Product.FootTrafficLevel.HIGH, null, null, null
+        );
+
+        assertThatThrownBy(() -> productService.createProduct(USER_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_REQUEST);
+    }
+
+    @Test
+    void 수정시_최소금액이_최고금액보다_높으면_거부된다() {
+        when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(ownedProduct()));
+
+        // 최고금액 10000 / 최소금액 20000 으로 함께 수정 -> 뒤집힌 조합이라 거부
+        ProductDto.UpdateRequest request = new ProductDto.UpdateRequest(
+                null, null, null, null, null, 10000, 20000, null, null, null, null, null, null);
+
+        assertThatThrownBy(() -> productService.updateProduct(USER_ID, PRODUCT_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_REQUEST);
+    }
+
+    @Test
     void 상품_수정시_qty를_보내면_remaining_quantity만_바뀌고_total_quantity는_유지된다() {
         Product product = ownedProduct();
         product.setTotalQuantity(10);
