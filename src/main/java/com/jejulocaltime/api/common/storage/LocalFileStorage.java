@@ -2,6 +2,7 @@ package com.jejulocaltime.api.common.storage;
 
 import com.jejulocaltime.api.common.exception.BusinessException;
 import com.jejulocaltime.api.common.exception.ErrorCode;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;

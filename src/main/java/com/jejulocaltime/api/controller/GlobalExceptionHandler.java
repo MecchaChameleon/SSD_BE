@@ -1,8 +1,9 @@
 package com.jejulocaltime.api.controller;
 
-import com.jejulocaltime.api.auth.kakao.InvalidKakaoTokenException;
+import com.jejulocaltime.api.auth.InvalidKakaoTokenException;
 import com.jejulocaltime.api.common.exception.BusinessException;
 import com.jejulocaltime.api.common.exception.ErrorResponse;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
