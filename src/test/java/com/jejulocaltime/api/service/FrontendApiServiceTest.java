@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -71,6 +72,14 @@ class FrontendApiServiceTest {
                 .hasMessageContaining("409 CONFLICT");
 
         verify(jdbc, never()).update(contains("hidden_by_buyer=true"), any(), any());
+    }
+
+    @Test
+    void salesHistoryRejectsReversedDateRange() {
+        assertThatThrownBy(() -> service.salesHistory(
+                USER_ID, LocalDate.of(2026, 7, 15), LocalDate.of(2026, 7, 14), 0, 20))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400 BAD_REQUEST");
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

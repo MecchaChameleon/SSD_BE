@@ -57,6 +57,7 @@ public class SwaggerConfig {
                 Map.entry("/api/seller/reservations/{id}/no-show", "노쇼 처리"),
                 Map.entry("/api/seller/dashboard", "판매자 대시보드 조회"),
                 Map.entry("/api/seller/sales/report", "판매 매출 리포트 조회"),
+                Map.entry("/api/seller/sales/history", "판매자 결제 완료 판매 내역 조회"),
                 Map.entry("/api/seller/products/{id}/price/apply", "추천 가격 적용"),
                 Map.entry("/api/users/me", "내 회원 정보 수정"),
                 Map.entry("/api/auth/logout", "로그아웃"),

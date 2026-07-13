@@ -32,6 +32,9 @@ public final class FrontendDto {
     public record SalesItem(Long productId, String productName, long quantity, long revenue) {}
     public record SalesReportResponse(LocalDate startDate, LocalDate endDate, long totalRevenue,
             long settlementRevenue, long totalQuantity, List<SalesItem> items) {}
+    public record SalesHistoryItem(Long reservationId, Long productId, String productName,
+            Long buyerId, String buyerNickname, Integer quantity, Integer unitPrice,
+            Integer totalAmount, OffsetDateTime soldAt) {}
     public record PriceApplyRequest(Integer price, Long recommendationId) {}
     public record UserUpdateRequest(String nickname, String profileImageUrl) {}
     public record NotificationResponse(Long id, String type, String title, String message, String referenceType,
