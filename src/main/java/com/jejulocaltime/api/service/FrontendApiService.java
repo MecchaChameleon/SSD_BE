@@ -98,7 +98,10 @@ public class FrontendApiService {
     public ReservationResponse reserve(Long userId, ReservationCreateRequest request){return createReservation(userId,request.productId(),request.quantity(),request.visitStartAt(),request.visitEndAt(),false);}
     private ReservationResponse createReservation(Long userId,Long productId,Integer quantity,OffsetDateTime start,OffsetDateTime end,boolean immediate){
         if(quantity==null||quantity<1)throw new ResponseStatusException(BAD_REQUEST,"수량은 1개 이상이어야 합니다.");
-        var p=jdbc.queryForMap("SELECT id,current_price,remaining_quantity,status,reservation_close_at FROM product WHERE id=? FOR UPDATE",productId);
+        var p=jdbc.queryForMap("SELECT id,current_price,remaining_quantity,status,(reservation_close_at>now()) AS sale_open FROM product WHERE id=? FOR UPDATE",productId);
+        if("ACTIVE".equals(p.get("status"))&&!Boolean.TRUE.equals(p.get("sale_open"))){
+            throw new ResponseStatusException(CONFLICT,"판매가 종료된 상품입니다.");
+        }
         if(!"ACTIVE".equals(p.get("status")))throw new ResponseStatusException(CONFLICT,"판매 중인 상품이 아닙니다.");
         if(((Number)p.get("remaining_quantity")).intValue()<quantity)throw new ResponseStatusException(CONFLICT,"판매 가능한 수량이 부족합니다.");
         int unit=((Number)p.get("current_price")).intValue(); String status=immediate?"COMPLETED":"REQUESTED";
