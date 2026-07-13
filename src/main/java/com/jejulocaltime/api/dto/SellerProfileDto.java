@@ -20,6 +20,8 @@ public class SellerProfileDto {
 
     // [PUT] 프로필 수정 (모두 선택적 입력 가능)
     @Schema(name="SellerProfileUpdateRequest") public record UpdateRequest(
+            String businessName,
+            String businessNumber,
             String address,
             Double latitude,
             Double longitude,
