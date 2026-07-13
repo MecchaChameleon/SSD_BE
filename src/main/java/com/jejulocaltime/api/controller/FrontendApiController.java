@@ -1,8 +1,9 @@
-package com.jejulocaltime.api.domain.frontend;
+package com.jejulocaltime.api.controller;
 
 import com.jejulocaltime.api.common.response.ApiResponseTemplate;
+import com.jejulocaltime.api.dto.FrontendDto.*;
 import com.jejulocaltime.api.dto.MeResponse;
-import com.jejulocaltime.api.domain.frontend.FrontendDto.*;
+import com.jejulocaltime.api.service.FrontendApiService;
 import com.jejulocaltime.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;

@@ -1,4 +1,4 @@
-package com.jejulocaltime.api.domain.frontend;
+package com.jejulocaltime.api.dto;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;

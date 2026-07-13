@@ -1,6 +1,6 @@
-package com.jejulocaltime.api.domain.frontend;
+package com.jejulocaltime.api.service;
 
-import com.jejulocaltime.api.domain.frontend.FrontendDto.*;
+import com.jejulocaltime.api.dto.FrontendDto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
