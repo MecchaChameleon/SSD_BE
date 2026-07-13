@@ -19,27 +19,25 @@ public final class FrontendDto {
             Integer price, Integer currentPrice, Double discountRate,
             Double lat, Double lng, String address, OffsetDateTime deadline, Boolean urgent) {}
     public record PurchaseRequest(Long productId, Integer quantity) {}
-    public record ReservationCreateRequest(Long productId, Integer quantity, OffsetDateTime visitStartAt, OffsetDateTime visitEndAt) {}
-    public record CancelRequest(String reason) {}
     public record RejectRequest(String reasonCode, String reason) {}
-    public record ReservationResponse(Long id, Long productId, String productName, String businessName,
+    public record PurchaseResponse(Long id, Long productId, String productName, String businessName,
             Long buyerId, String buyerNickname, Integer quantity, Integer unitPrice, Integer totalAmount,
-            OffsetDateTime visitStartAt, OffsetDateTime visitEndAt, String status, String rejectReason,
+            String status, String rejectReason,
             OffsetDateTime requestedAt, String paymentStatus) {}
-    public record DashboardResponse(LocalDate date, ReservationCounts reservationCounts, long dailyRevenue,
+    public record DashboardResponse(LocalDate date, PaymentCounts paymentCounts, long dailyRevenue,
             long periodRevenue, long registeredProductCount) {}
-    public record ReservationCounts(long requested, long approved, long noShow) {}
+    public record PaymentCounts(long pending, long accepted, long refunded) {}
     public record SalesItem(Long productId, String productName, long quantity, long revenue) {}
     public record SalesReportResponse(LocalDate startDate, LocalDate endDate, long totalRevenue,
             long settlementRevenue, long totalQuantity, List<SalesItem> items) {}
-    public record SalesHistoryItem(Long reservationId, Long productId, String productName,
+    public record SalesHistoryItem(Long purchaseId, Long productId, String productName,
             Long buyerId, String buyerNickname, Integer quantity, Integer unitPrice,
             Integer totalAmount, OffsetDateTime soldAt) {}
     public record PriceApplyRequest(Integer price, Long recommendationId) {}
     public record UserUpdateRequest(String nickname, String profileImageUrl) {}
     public record NotificationResponse(Long id, String type, String title, String message, String referenceType,
             Long referenceId, boolean read, OffsetDateTime createdAt) {}
-    public record NotificationSettings(boolean commonEvent, boolean sellerReservation, boolean sellerAiPrice,
-            boolean sellerSettlement, boolean buyerDeadline, boolean buyerReservationApproved) {}
+    public record NotificationSettings(boolean commonEvent, boolean sellerPayment, boolean sellerAiPrice,
+            boolean sellerSettlement, boolean buyerDeadline, boolean buyerPaymentResult) {}
     public record PushTokenRequest(String deviceToken, String platform) {}
 }

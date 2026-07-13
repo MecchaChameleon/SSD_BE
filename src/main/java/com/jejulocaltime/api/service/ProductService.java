@@ -4,11 +4,11 @@ import com.jejulocaltime.api.common.exception.BusinessException;
 import com.jejulocaltime.api.common.exception.ErrorCode;
 import com.jejulocaltime.api.common.util.NumberConversions;
 import com.jejulocaltime.api.domain.Product;
-import com.jejulocaltime.api.domain.Reservation;
+import com.jejulocaltime.api.domain.PaymentOrder;
 import com.jejulocaltime.api.domain.SellerProfile;
 import com.jejulocaltime.api.dto.ProductDto;
 import com.jejulocaltime.api.repository.ProductRepository;
-import com.jejulocaltime.api.repository.ReservationRepository;
+import com.jejulocaltime.api.repository.PaymentOrderRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,11 +24,11 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ProductService {
 
-    private static final List<Reservation.Status> ACTIVE_RESERVATION_STATUSES =
-            List.of(Reservation.Status.REQUESTED, Reservation.Status.APPROVED);
+    private static final List<PaymentOrder.Status> PENDING_PAYMENT_STATUSES =
+            List.of(PaymentOrder.Status.REQUESTED);
 
     private final ProductRepository productRepository;
-    private final ReservationRepository reservationRepository;
+    private final PaymentOrderRepository paymentOrderRepository;
     private final ProductAccessGuard accessGuard;
 
     // 1. 상품/자원 등록
@@ -167,10 +167,10 @@ public class ProductService {
     public void deleteProduct(Long userId, Long productId) {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
 
-        if (reservationRepository.existsByProductIdAndStatusIn(productId, ACTIVE_RESERVATION_STATUSES)) {
+        if (paymentOrderRepository.existsByProductIdAndStatusIn(productId, PENDING_PAYMENT_STATUSES)) {
             throw new BusinessException(
-                    ErrorCode.PRODUCT_HAS_ACTIVE_RESERVATION,
-                    "예약(REQUESTED/APPROVED)이 진행 중인 상품은 삭제할 수 없습니다.");
+                    ErrorCode.PRODUCT_HAS_PENDING_PAYMENT,
+                    "판매자 확인 대기 중인 결제가 있는 상품은 삭제할 수 없습니다.");
         }
 
         productRepository.delete(product);
@@ -184,14 +184,14 @@ public class ProductService {
         return ProductDto.Response.from(product);
     }
 
-    // 10. 예약 승인 시 잔여 수량(재고) 차감
+    // 10. 결제 시 잔여 수량(재고) 차감
     @Transactional
     public void decreaseRemainingQuantity(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
 
         if (product.getRemainingQuantity() <= 0) {
-            throw new IllegalStateException("잔여 수량이 없어 예약을 승인할 수 없습니다.");
+            throw new IllegalStateException("잔여 수량이 없어 결제할 수 없습니다.");
         }
 
         // 잔여 수량 1 차감

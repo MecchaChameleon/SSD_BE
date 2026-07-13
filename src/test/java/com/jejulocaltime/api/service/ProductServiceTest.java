@@ -3,11 +3,11 @@ package com.jejulocaltime.api.service;
 import com.jejulocaltime.api.common.exception.BusinessException;
 import com.jejulocaltime.api.common.exception.ErrorCode;
 import com.jejulocaltime.api.domain.Product;
-import com.jejulocaltime.api.domain.Reservation;
+import com.jejulocaltime.api.domain.PaymentOrder;
 import com.jejulocaltime.api.domain.SellerProfile;
 import com.jejulocaltime.api.dto.ProductDto;
 import com.jejulocaltime.api.repository.ProductRepository;
-import com.jejulocaltime.api.repository.ReservationRepository;
+import com.jejulocaltime.api.repository.PaymentOrderRepository;
 import com.jejulocaltime.api.repository.SellerProfileRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +38,7 @@ class ProductServiceTest {
     private ProductRepository productRepository;
 
     @Mock
-    private ReservationRepository reservationRepository;
+    private PaymentOrderRepository paymentOrderRepository;
 
     @Mock
     private SellerProfileRepository sellerProfileRepository;
@@ -48,7 +48,7 @@ class ProductServiceTest {
     @BeforeEach
     void setUp() {
         ProductAccessGuard accessGuard = new ProductAccessGuard(sellerProfileRepository, productRepository);
-        productService = new ProductService(productRepository, reservationRepository, accessGuard);
+        productService = new ProductService(productRepository, paymentOrderRepository, accessGuard);
     }
 
     @Test
@@ -195,27 +195,27 @@ class ProductServiceTest {
     }
 
     @Test
-    void 진행중인_예약이_있으면_삭제가_거부된다() {
+    void 확인_대기_결제가_있으면_삭제가_거부된다() {
         Product product = ownedProduct();
         when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-        when(reservationRepository.existsByProductIdAndStatusIn(
+        when(paymentOrderRepository.existsByProductIdAndStatusIn(
                 eq(PRODUCT_ID), anyCollection())).thenReturn(true);
 
         assertThatThrownBy(() -> productService.deleteProduct(USER_ID, PRODUCT_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
-                .isEqualTo(ErrorCode.PRODUCT_HAS_ACTIVE_RESERVATION);
+                .isEqualTo(ErrorCode.PRODUCT_HAS_PENDING_PAYMENT);
     }
 
     @Test
-    void 진행중인_예약이_없으면_정상적으로_삭제된다() {
+    void 확인_대기_결제가_없으면_정상적으로_삭제된다() {
         Product product = ownedProduct();
         when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sellerProfile()));
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-        when(reservationRepository.existsByProductIdAndStatusIn(
+        when(paymentOrderRepository.existsByProductIdAndStatusIn(
                 PRODUCT_ID,
-                List.of(Reservation.Status.REQUESTED, Reservation.Status.APPROVED))).thenReturn(false);
+                List.of(PaymentOrder.Status.REQUESTED))).thenReturn(false);
 
         productService.deleteProduct(USER_ID, PRODUCT_ID);
 

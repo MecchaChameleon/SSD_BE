@@ -48,7 +48,7 @@ public class AuthController {
     }
 
     @DeleteMapping("/me")
-    @Operation(summary = "회원 탈퇴", description = "현재 회원과 연관된 판매자, 상품, 예약 데이터를 함께 삭제합니다. 성공 시 응답 본문 없이 204를 반환합니다.")
+    @Operation(summary = "회원 탈퇴", description = "현재 회원과 연관된 판매자, 상품, 결제 내역 데이터를 함께 삭제합니다. 성공 시 응답 본문 없이 204를 반환합니다.")
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.NO_CONTENT)
     public void withdraw(@AuthenticationPrincipal Long userId) {
         if (!userRepository.existsById(userId)) {

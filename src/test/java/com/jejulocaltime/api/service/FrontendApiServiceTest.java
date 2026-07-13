@@ -1,14 +1,15 @@
 package com.jejulocaltime.api.service;
 
-import com.jejulocaltime.api.dto.FrontendDto.ReservationResponse;
+import com.jejulocaltime.api.dto.FrontendDto.PurchaseResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.OffsetDateTime;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.when;
 class FrontendApiServiceTest {
 
     private static final long USER_ID = 1L;
-    private static final long RESERVATION_ID = 10L;
+    private static final long PURCHASE_ID = 10L;
 
     private JdbcTemplate jdbc;
     private FrontendApiService service;
@@ -35,43 +36,57 @@ class FrontendApiServiceTest {
     }
 
     @Test
-    void approvedReservationCannotBeCanceled() {
-        givenReservation(response("APPROVED", "UNPAID"));
+    void sellerCanAcceptPendingPaidPurchase() {
+        givenPurchase(response("PENDING", "PAID"));
+        when(jdbc.queryForMap(anyString(), eq(PURCHASE_ID), eq(USER_ID)))
+                .thenReturn(Map.of("status", "REQUESTED", "payment_status", "PAID"));
 
-        assertThatThrownBy(() -> service.cancel(USER_ID, RESERVATION_ID, "사용자 취소"))
+        service.sellerPaymentAction(USER_ID, PURCHASE_ID, true, null);
+
+        verify(jdbc).update(contains("status='COMPLETED'"), eq(PURCHASE_ID));
+    }
+
+    @Test
+    void rejectingPendingPaymentRefundsAndRestoresStock() {
+        givenPurchase(response("PENDING", "PAID"));
+        when(jdbc.queryForMap(anyString(), eq(PURCHASE_ID), eq(USER_ID)))
+                .thenReturn(Map.of("status", "REQUESTED", "payment_status", "PAID"));
+
+        service.sellerPaymentAction(USER_ID, PURCHASE_ID, false, "재고 부족");
+
+        verify(jdbc).update(contains("payment_status='REFUNDED'"), eq("재고 부족"), eq(PURCHASE_ID));
+        verify(jdbc).update(contains("remaining_quantity=remaining_quantity+"), eq(1), eq(20L));
+    }
+
+    @Test
+    void acceptedPaymentCannotBeRejectedAfterward() {
+        givenPurchase(response("ACCEPTED", "PAID"));
+        when(jdbc.queryForMap(anyString(), eq(PURCHASE_ID), eq(USER_ID)))
+                .thenReturn(Map.of("status", "COMPLETED", "payment_status", "PAID"));
+
+        assertThatThrownBy(() -> service.sellerPaymentAction(USER_ID, PURCHASE_ID, false, "변심"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("409 CONFLICT");
 
-        verify(jdbc, never()).update(contains("status='CANCELED'"), any(), any());
+        verify(jdbc, never()).update(contains("payment_status='REFUNDED'"), any(), any());
     }
 
     @Test
-    void rejectedReservationHistoryCanBeHidden() {
-        givenReservation(response("REJECTED", "UNPAID"));
+    void pendingPurchaseHistoryCannotBeHidden() {
+        givenPurchase(response("PENDING", "PAID"));
 
-        service.hide(USER_ID, RESERVATION_ID);
-
-        verify(jdbc).update(contains("hidden_by_buyer=true"), eq(RESERVATION_ID), eq(USER_ID));
-    }
-
-    @Test
-    void paidReservationHistoryCanBeHidden() {
-        givenReservation(response("COMPLETED", "PAID"));
-
-        service.hide(USER_ID, RESERVATION_ID);
-
-        verify(jdbc).update(contains("hidden_by_buyer=true"), eq(RESERVATION_ID), eq(USER_ID));
-    }
-
-    @Test
-    void completedButUnpaidReservationHistoryCannotBeHidden() {
-        givenReservation(response("COMPLETED", "UNPAID"));
-
-        assertThatThrownBy(() -> service.hide(USER_ID, RESERVATION_ID))
+        assertThatThrownBy(() -> service.hidePurchase(USER_ID, PURCHASE_ID))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("409 CONFLICT");
+    }
 
-        verify(jdbc, never()).update(contains("hidden_by_buyer=true"), any(), any());
+    @Test
+    void acceptedPurchaseHistoryCanBeHidden() {
+        givenPurchase(response("ACCEPTED", "PAID"));
+
+        service.hidePurchase(USER_ID, PURCHASE_ID);
+
+        verify(jdbc).update(contains("hidden_by_buyer=true"), eq(PURCHASE_ID), eq(USER_ID));
     }
 
     @Test
@@ -83,15 +98,14 @@ class FrontendApiServiceTest {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private void givenReservation(ReservationResponse response) {
-        when(jdbc.queryForObject(anyString(), any(RowMapper.class), eq(RESERVATION_ID), eq(USER_ID)))
+    private void givenPurchase(PurchaseResponse response) {
+        when(jdbc.queryForObject(anyString(), any(RowMapper.class), eq(PURCHASE_ID), eq(USER_ID)))
                 .thenReturn(response);
     }
 
-    private ReservationResponse response(String status, String paymentStatus) {
-        return new ReservationResponse(
-                RESERVATION_ID, 20L, "상품", "매장", USER_ID, "구매자",
-                1, 10_000, 10_000, null, null, status, null,
-                OffsetDateTime.now(), paymentStatus);
+    private PurchaseResponse response(String status, String paymentStatus) {
+        return new PurchaseResponse(
+                PURCHASE_ID, 20L, "상품", "매장", USER_ID, "구매자",
+                1, 10_000, 10_000, status, null, OffsetDateTime.now(), paymentStatus);
     }
 }

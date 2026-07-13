@@ -14,7 +14,7 @@ public enum ErrorCode {
 
     SELLER_PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "판매자 프로필을 찾을 수 없습니다."),
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."),
-    PRODUCT_HAS_ACTIVE_RESERVATION(HttpStatus.CONFLICT, "예약이 진행 중인 상품은 삭제할 수 없습니다."),
+    PRODUCT_HAS_PENDING_PAYMENT(HttpStatus.CONFLICT, "판매자 확인 대기 중인 결제가 있는 상품은 삭제할 수 없습니다."),
 
     // TODO: AI 파트와 실제 스펙(에러 응답 형식 포함) 확정 후 세분화 필요
     AI_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "AI 추천 서버 호출에 실패했습니다."),
