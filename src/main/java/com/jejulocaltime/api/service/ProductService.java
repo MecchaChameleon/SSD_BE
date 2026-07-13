@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -36,6 +37,7 @@ public class ProductService {
         SellerProfile profile = accessGuard.requireSellerProfile(userId);
         requireCompatible(request.businessType(), request.category());
         requireValidPriceRange(request.price(), request.minPrice());
+        requireValidSalePeriod(request.openTime(), request.deadline());
 
         Product product = new Product();
         product.setSellerProfileId(profile.getId());
@@ -91,6 +93,10 @@ public class ProductService {
         }
         if (request.openTime() != null) product.setAvailableStartAt(request.openTime());
         if (request.deadline() != null) product.setReservationCloseAt(request.deadline());
+        // 판매시작/종료 중 하나라도 바뀌면 최종 판매기간(시작 < 종료)을 검증한다.
+        if (request.openTime() != null || request.deadline() != null) {
+            requireValidSalePeriod(product.getAvailableStartAt(), product.getReservationCloseAt());
+        }
         if (request.foot() != null) product.setFootTrafficLevel(request.foot());
         if (request.address() != null) product.setAddress(request.address());
         if (request.lat() != null) product.setLatitude(NumberConversions.toBigDecimal(request.lat()));
@@ -113,6 +119,15 @@ public class ProductService {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
                     "최소금액(" + minPrice + ")은 최고금액(" + originalPrice + ")보다 높을 수 없습니다.");
+        }
+    }
+
+    // 판매 시작시간(availableStartAt)은 종료(마감)시간(reservationCloseAt)보다 앞서야 한다.
+    private void requireValidSalePeriod(LocalDateTime openTime, LocalDateTime deadline) {
+        if (openTime != null && deadline != null && !openTime.isBefore(deadline)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "판매 시작시간(" + openTime + ")은 종료시간(" + deadline + ")보다 앞서야 합니다.");
         }
     }
 
