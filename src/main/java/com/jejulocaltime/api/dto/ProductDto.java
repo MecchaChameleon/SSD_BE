@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public class ProductDto {
 
@@ -19,8 +20,8 @@ public class ProductDto {
             @NotNull Integer qty,
             @NotNull Integer price,
             @NotNull Integer minPrice,
-            LocalDateTime openTime,
-            @NotNull LocalDateTime deadline,
+            OffsetDateTime openTime,
+            @NotNull OffsetDateTime deadline,
             Product.FootTrafficLevel foot,
             // address/lat/lng를 안 보내면 판매자 본인 SellerProfile에 등록된 매장 주소로 채워진다.
             String address,
@@ -37,8 +38,8 @@ public class ProductDto {
             Integer qty,
             Integer price,
             Integer minPrice,
-            LocalDateTime openTime,
-            LocalDateTime deadline,
+            OffsetDateTime openTime,
+            OffsetDateTime deadline,
             Product.FootTrafficLevel foot,
             String address,
             Double lat,
@@ -64,8 +65,8 @@ public class ProductDto {
             Integer price,
             Integer minPrice,
             Integer currentPrice,
-            LocalDateTime openTime,
-            LocalDateTime deadline,
+            OffsetDateTime openTime,
+            OffsetDateTime deadline,
             Product.FootTrafficLevel foot,
             String address,
             Double lat,

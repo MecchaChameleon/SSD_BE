@@ -16,6 +16,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * 판매자 상품/자원 (SEL-01~04).
@@ -92,13 +93,13 @@ public class Product {
     private Integer currentPrice;
 
     @Column(name = "available_start_at")
-    private LocalDateTime availableStartAt;
+    private OffsetDateTime availableStartAt;
 
     @Column(name = "available_end_at")
-    private LocalDateTime availableEndAt;
+    private OffsetDateTime availableEndAt;
 
     @Column(name = "reservation_close_at", nullable = false)
-    private LocalDateTime reservationCloseAt;
+    private OffsetDateTime reservationCloseAt;
 
     private String address;
 

@@ -16,7 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -109,7 +109,7 @@ public class ProductService {
                 if (product.getRemainingQuantity() == null || product.getRemainingQuantity() <= 0) {
                     throw new BusinessException(ErrorCode.INVALID_REQUEST, "판매중으로 변경하려면 수량이 1개 이상이어야 합니다.");
                 }
-                if (product.getReservationCloseAt() == null || !product.getReservationCloseAt().isAfter(LocalDateTime.now())) {
+                if (product.getReservationCloseAt() == null || !product.getReservationCloseAt().isAfter(OffsetDateTime.now())) {
                     throw new BusinessException(ErrorCode.INVALID_REQUEST, "판매중으로 변경하려면 마감 시각이 현재보다 이후여야 합니다.");
                 }
             }
@@ -137,7 +137,7 @@ public class ProductService {
     }
 
     // 판매 시작시간(availableStartAt)은 종료(마감)시간(reservationCloseAt)보다 앞서야 한다.
-    private void requireValidSalePeriod(LocalDateTime openTime, LocalDateTime deadline) {
+    private void requireValidSalePeriod(OffsetDateTime openTime, OffsetDateTime deadline) {
         if (openTime != null && deadline != null && !openTime.isBefore(deadline)) {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,

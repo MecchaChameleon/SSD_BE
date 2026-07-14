@@ -16,7 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,7 +59,7 @@ class ProductServiceTest {
         ProductDto.CreateRequest request = new ProductDto.CreateRequest(
                 "흑돼지 당일 특가", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
                 Product.EnvironmentType.INDOOR,
-                10, 20000, 12000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
+                10, 20000, 12000, OffsetDateTime.now(), OffsetDateTime.now().plusHours(2),
                 Product.FootTrafficLevel.HIGH, "제주시 어딘가", 33.45, 126.56
         );
 
@@ -80,7 +80,7 @@ class ProductServiceTest {
         ProductDto.CreateRequest request = new ProductDto.CreateRequest(
                 "잘못된 조합", Product.BusinessType.LODGING, Product.Category.SAME_DAY_INVENTORY,
                 Product.EnvironmentType.INDOOR,
-                10, 20000, 12000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
+                10, 20000, 12000, OffsetDateTime.now(), OffsetDateTime.now().plusHours(2),
                 Product.FootTrafficLevel.HIGH, null, null, null
         );
 
@@ -100,7 +100,7 @@ class ProductServiceTest {
         ProductDto.CreateRequest request = new ProductDto.CreateRequest(
                 "흑돼지 당일 특가", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
                 Product.EnvironmentType.INDOOR,
-                10, 20000, 12000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
+                10, 20000, 12000, OffsetDateTime.now(), OffsetDateTime.now().plusHours(2),
                 Product.FootTrafficLevel.HIGH, null, null, null
         );
 
@@ -117,7 +117,7 @@ class ProductServiceTest {
         ProductDto.CreateRequest request = new ProductDto.CreateRequest(
                 "가격 뒤집힘", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
                 Product.EnvironmentType.INDOOR,
-                10, 10000, 20000, LocalDateTime.now(), LocalDateTime.now().plusHours(2),
+                10, 10000, 20000, OffsetDateTime.now(), OffsetDateTime.now().plusHours(2),
                 Product.FootTrafficLevel.HIGH, null, null, null
         );
 
@@ -135,7 +135,7 @@ class ProductServiceTest {
         ProductDto.CreateRequest request = new ProductDto.CreateRequest(
                 "시간 뒤집힘", Product.BusinessType.RESTAURANT, Product.Category.SAME_DAY_INVENTORY,
                 Product.EnvironmentType.INDOOR,
-                10, 20000, 12000, LocalDateTime.now().plusHours(3), LocalDateTime.now().plusHours(1),
+                10, 20000, 12000, OffsetDateTime.now().plusHours(3), OffsetDateTime.now().plusHours(1),
                 Product.FootTrafficLevel.HIGH, null, null, null
         );
 
@@ -153,7 +153,7 @@ class ProductServiceTest {
         // 시작 now+5h / 종료 now+1h 로 함께 수정 -> 뒤집힌 기간이라 거부
         ProductDto.UpdateRequest request = new ProductDto.UpdateRequest(
                 null, null, null, null, null, null, null,
-                LocalDateTime.now().plusHours(5), LocalDateTime.now().plusHours(1), null, null, null, null, null);
+                OffsetDateTime.now().plusHours(5), OffsetDateTime.now().plusHours(1), null, null, null, null, null);
 
         assertThatThrownBy(() -> productService.updateProduct(USER_ID, PRODUCT_ID, request))
                 .isInstanceOf(BusinessException.class)
