@@ -28,10 +28,10 @@ public record KakaoUserInfoResponse(
     }
 
     public String nickname() {
-        return kakaoAccount == null || kakaoAccount.profile() == null ? null : kakaoAccount.profile().nickname();
+        return kakaoAccount.profile().nickname();
     }
 
     public String profileImageUrl() {
-        return kakaoAccount == null || kakaoAccount.profile() == null ? null : kakaoAccount.profile().profileImageUrl();
+        return kakaoAccount.profile().profileImageUrl();
     }
 }
