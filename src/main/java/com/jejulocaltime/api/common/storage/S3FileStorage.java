@@ -2,6 +2,8 @@ package com.jejulocaltime.api.common.storage;
 
 import com.jejulocaltime.api.common.exception.BusinessException;
 import com.jejulocaltime.api.common.exception.ErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -17,6 +19,9 @@ import java.util.UUID;
 @Component
 @ConditionalOnProperty(name = "file-storage.type", havingValue = "s3")
 public class S3FileStorage implements FileStorage {
+
+    private static final Logger log = LoggerFactory.getLogger(S3FileStorage.class);
+
     private final S3Client s3;
     private final String bucket;
     private final String publicBaseUrl;
@@ -41,6 +46,7 @@ public class S3FileStorage implements FileStorage {
                     RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
             return publicBaseUrl + "/" + key;
         } catch (IOException | RuntimeException exception) {
+            log.error("S3 이미지 업로드 실패: bucket={}, key={}", bucket, key, exception);
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미지 저장에 실패했습니다.");
         }
     }
