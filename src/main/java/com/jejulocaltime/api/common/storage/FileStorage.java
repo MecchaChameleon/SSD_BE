@@ -3,8 +3,8 @@ package com.jejulocaltime.api.common.storage;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 파일 저장소 추상화. 지금은 로컬 디스크 구현체(LocalFileStorage)만 있지만,
- * 나중에 S3 등 실제 스토리지 구현체로 교체할 수 있도록 인터페이스로 분리했다.
+ * 파일 저장소 추상화. 기본 구현체는 S3FileStorage이고,
+ * local 프로필에서는 LocalFileStorage(로컬 디스크)를 사용한다.
  */
 public interface FileStorage {
 
