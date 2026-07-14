@@ -35,3 +35,18 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
+      # 아래는 값을 Blueprint가 관리하지 않고(sync: false) Render 대시보드에서 직접 입력한다.
+      # 상품 이미지 업로드(S3FileStorage) 사용에 필요.
+      - key: FILE_STORAGE_TYPE
+        value: s3
+      - key: S3_BUCKET
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      # 커스텀 도메인/CDN을 안 쓰면 비워둬도 됨 (기본값: https://{bucket}.s3.{region}.amazonaws.com)
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
