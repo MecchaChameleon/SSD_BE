@@ -4,6 +4,7 @@ import com.jejulocaltime.api.common.exception.BusinessException;
 import com.jejulocaltime.api.common.exception.ErrorCode;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,11 +14,11 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 /**
- * 실제 스토리지(S3 등) 연동 전까지 사용하는 더미/로컬 구현체.
- * 서버가 재배포되면 로컬 디스크 내용이 사라지므로 운영 환경에는 적합하지 않다.
- * TODO: S3FileStorage(FileStorage 구현체)로 교체 예정.
+ * 로컬 개발 전용 구현체. 서버가 재배포되면 로컬 디스크 내용이 사라지므로
+ * local 프로필(spring.profiles.active=local)에서만 활성화되고, 그 외에는 S3FileStorage를 사용한다.
  */
 @Component
+@Profile("local")
 public class LocalFileStorage implements FileStorage {
 
     private final Path rootDir;
