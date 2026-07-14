@@ -29,7 +29,11 @@ public final class FrontendDto {
     public record PaymentCounts(long pending, long accepted, long refunded) {}
     public record SalesItem(Long productId, String productName, long quantity, long revenue) {}
     public record SalesReportResponse(LocalDate startDate, LocalDate endDate, long totalRevenue,
-            long settlementRevenue, long totalQuantity, List<SalesItem> items) {}
+            long settlementRevenue, long totalQuantity, List<SalesItem> items,
+            String bankName, String accountNumber) {}
+    public record SettlementRequest(LocalDate startDate, LocalDate endDate) {}
+    public record SettlementResponse(Long id, long grossAmount, long platformFee, long paymentFee,
+            long settlementAmount, String status, OffsetDateTime requestedAt) {}
     public record SalesHistoryItem(Long purchaseId, Long productId, String productName,
             Long buyerId, String buyerNickname, Integer quantity, Integer unitPrice,
             Integer totalAmount, OffsetDateTime soldAt) {}
