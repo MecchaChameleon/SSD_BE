@@ -70,19 +70,13 @@ public class SellerProfileService {
                 .orElseThrow(() -> new IllegalArgumentException("가게 프로필을 찾을 수 없습니다."));
 
         // 프론트엔드에서 null이 아닌 값을 보냈을 때만 부분 수정(Dirty Checking)
-        if (request.businessName() != null) profile.setBusinessName(request.businessName());
-        if (request.businessNumber() != null) profile.setBusinessNumber(request.businessNumber());
+        // 사업자등록번호·상호명·대표자명은 국세청 검증된 정보이므로 수정 불가
         if (request.address() != null) profile.setAddress(request.address());
         if (request.latitude() != null) profile.setLatitude(NumberConversions.toBigDecimal(request.latitude()));
         if (request.longitude() != null) profile.setLongitude(NumberConversions.toBigDecimal(request.longitude()));
         if (request.bankName() != null) profile.setBankName(request.bankName());
         if (request.accountNumber() != null) profile.setAccountNumber(request.accountNumber());
         if (request.accountHolder() != null) profile.setAccountHolder(request.accountHolder());
-
-        applicationRepository.findById(profile.getSellerApplicationId()).ifPresent(application -> {
-            if (request.businessName() != null) application.setBusinessName(request.businessName());
-            if (request.businessNumber() != null) application.setBusinessNumber(request.businessNumber());
-        });
 
         return SellerProfileDto.Response.from(profile);
     }

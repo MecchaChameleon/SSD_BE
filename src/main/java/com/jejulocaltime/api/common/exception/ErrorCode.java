@@ -16,6 +16,9 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."),
     PRODUCT_HAS_PENDING_PAYMENT(HttpStatus.CONFLICT, "판매자 확인 대기 중인 결제가 있는 상품은 삭제할 수 없습니다."),
 
+    BUSINESS_NUMBER_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 등록된 사업자등록번호입니다."),
+    NTS_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "사업자 진위확인 서버 호출에 실패했습니다."),
+
     // TODO: AI 파트와 실제 스펙(에러 응답 형식 포함) 확정 후 세분화 필요
     AI_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "AI 추천 서버 호출에 실패했습니다."),
     ;

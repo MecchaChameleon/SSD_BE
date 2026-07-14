@@ -3,6 +3,7 @@ package com.jejulocaltime.api.controller;
 import com.jejulocaltime.api.dto.SellerApplicationDto;
 import com.jejulocaltime.api.service.SellerApplicationService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,10 +21,10 @@ public class SellerApplicationController {
 
     // 1. 입점 신청 (POST)
     @PostMapping
-    @Operation(summary = "판매자 입점 신청", description = "상호명, 사업자등록번호, 대표자 정보를 등록합니다. 현재 정책에서는 신청 즉시 승인되고 판매자 프로필이 생성됩니다.")
+    @Operation(summary = "판매자 입점 신청", description = "상호명, 사업자등록번호, 대표자명, 개업일자를 국세청 API로 검증합니다. 검증 통과 시 APPROVED와 SELLER 권한이 부여되고, 실패 시 REJECTED 상태로 저장됩니다.")
     public ResponseEntity<SellerApplicationDto.Response> createApplication(
             @AuthenticationPrincipal Long userId,
-            @RequestBody SellerApplicationDto.CreateRequest request) {
+            @Valid @RequestBody SellerApplicationDto.CreateRequest request) {
 
         SellerApplicationDto.Response response = applicationService.createApplication(userId, request);
         return ResponseEntity.ok(response);

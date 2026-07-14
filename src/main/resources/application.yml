@@ -38,6 +38,11 @@ ai:
   service:
     base-url: ${AI_SERVICE_BASE_URL:http://localhost:9000}
 
+# 국세청 사업자등록정보 진위확인 및 상태조회 (공공데이터포털)
+nts:
+  base-url: ${NTS_BASE_URL:https://api.odcloud.kr/api/nts-businessman/v1}
+  service-key: ${NTS_SERVICE_KEY:U5x7pdMzIwMRxclb0Kv6QpvMQHnAHc7WyAYn4b9DiAssQMw/px6J7rVDTbG09KlXkzGLf3Ym+5ToDuDIlEFglA==}
+
 # 상품 이미지 업로드 임시 저장소(LocalFileStorage). TODO: S3 연동 후 제거.
 file-storage:
   type: ${FILE_STORAGE_TYPE:local}
@@ -52,3 +57,4 @@ file-storage:
 spring.servlet.multipart:
   max-file-size: 10MB
   max-request-size: 30MB
+

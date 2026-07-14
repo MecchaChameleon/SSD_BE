@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "seller_application")
@@ -29,6 +30,9 @@ public class SellerApplication {
     @Column(nullable = false)
     private String businessNumber;
 
+    @Column(name = "open_date")
+    private String openDate;
+
     @Column(nullable = false)
     private String representativeName;
 
@@ -49,6 +53,12 @@ public class SellerApplication {
     private LocalDateTime appliedAt;
 
     private LocalDateTime reviewedAt;
+
+    @Column(name = "nts_verified_at")
+    private OffsetDateTime ntsVerifiedAt;
+
+    @Column(name = "nts_business_status")
+    private String ntsBusinessStatus;
 
     public enum ApplicationStatus {
         PENDING, APPROVED, REJECTED
