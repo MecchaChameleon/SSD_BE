@@ -33,8 +33,12 @@ public class SellerApplicationService {
      */
     @Transactional
     public SellerApplicationDto.Response createApplication(Long userId, SellerApplicationDto.CreateRequest request) {
-        String businessNumber = normalizeAndValidateBusinessNumber(request.businessNumber());
-        String openDate = normalizeAndValidateOpenDate(request.openDate());
+        // [테스트용 임시 처리] 프론트에서 값을 안 보내면 임의의 더미 데이터로 대체합니다.
+        String rawBusinessNumber = (request.businessNumber() == null || request.businessNumber().isBlank()) ? "1234567890" : request.businessNumber();
+        String rawOpenDate = (request.openDate() == null || request.openDate().isBlank()) ? "20240101" : request.openDate();
+
+        String businessNumber = normalizeAndValidateBusinessNumber(rawBusinessNumber);
+        String openDate = normalizeAndValidateOpenDate(rawOpenDate);
 
         var existing = applicationRepository.findByUserId(userId);
         if (existing.isPresent() && existing.get().getStatus() == SellerApplication.ApplicationStatus.APPROVED) {
@@ -45,10 +49,12 @@ public class SellerApplicationService {
 
         SellerApplication application = existing.orElseGet(SellerApplication::new);
         application.setUserId(userId);
-        application.setBusinessName(request.businessName().trim());
+        
+        // 이름도 널포인터 방지를 위해 기본값 세팅
+        application.setBusinessName(request.businessName() != null ? request.businessName().trim() : "테스트 상호명");
         application.setBusinessNumber(businessNumber);
         application.setOpenDate(openDate);
-        application.setRepresentativeName(request.representativeName().trim());
+        application.setRepresentativeName(request.representativeName() != null ? request.representativeName().trim() : "테스트 대표자");
         application.setBusinessDocumentUrl(request.businessDocumentUrl() == null ? "" : request.businessDocumentUrl());
         
         // -------------------------------------------------------------
