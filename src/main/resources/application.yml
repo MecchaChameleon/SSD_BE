@@ -40,6 +40,15 @@ ai:
 
 # 상품 이미지 업로드 임시 저장소(LocalFileStorage). TODO: S3 연동 후 제거.
 file-storage:
+  type: ${FILE_STORAGE_TYPE:local}
   local:
     root-dir: ${FILE_STORAGE_ROOT_DIR:./uploads}
     public-base-url: ${FILE_STORAGE_PUBLIC_BASE_URL:/uploads}
+  s3:
+    region: ${AWS_REGION:ap-northeast-2}
+    bucket: ${S3_BUCKET:}
+    public-base-url: ${S3_PUBLIC_BASE_URL:}
+
+spring.servlet.multipart:
+  max-file-size: 10MB
+  max-request-size: 30MB

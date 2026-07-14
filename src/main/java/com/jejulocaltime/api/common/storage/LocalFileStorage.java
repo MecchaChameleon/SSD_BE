@@ -5,6 +5,7 @@ import com.jejulocaltime.api.common.exception.ErrorCode;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -18,6 +19,7 @@ import java.util.UUID;
  * TODO: S3FileStorage(FileStorage 구현체)로 교체 예정.
  */
 @Component
+@ConditionalOnProperty(name = "file-storage.type", havingValue = "local", matchIfMissing = true)
 public class LocalFileStorage implements FileStorage {
 
     private final Path rootDir;
