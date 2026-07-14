@@ -10,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -51,6 +52,7 @@ public class FrontendApiController {
     @PostMapping("/api/seller/products/{id}/price/apply") public ResponseEntity<ApiResponseTemplate<ProductResponse>> applyPrice(@AuthenticationPrincipal Long userId,@PathVariable Long id,@RequestBody PriceApplyRequest body){return ApiResponseTemplate.success(service.applyPrice(userId,id,body));}
 
     @PatchMapping("/api/users/me") public ResponseEntity<ApiResponseTemplate<MeResponse>> updateMe(@AuthenticationPrincipal Long userId,@RequestBody UserUpdateRequest body){service.updateUser(userId,body);return ApiResponseTemplate.success(users.findById(userId).map(MeResponse::from).orElseThrow());}
+    @PostMapping("/api/users/me/profile-image") public ResponseEntity<ApiResponseTemplate<ProfileImageResponse>> uploadProfileImage(@AuthenticationPrincipal Long userId,@RequestPart("image") MultipartFile image){return ApiResponseTemplate.success(service.uploadProfileImage(userId,image));}
     @PostMapping("/api/auth/logout") public ResponseEntity<ApiResponseTemplate<Void>> logout(){return ApiResponseTemplate.success();}
 
     @GetMapping("/api/notifications") public ResponseEntity<ApiResponseTemplate<PageResponse<NotificationResponse>>> notifications(@AuthenticationPrincipal Long userId,@RequestParam(defaultValue="ALL")String filter,@RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="10")int size){return ApiResponseTemplate.success(service.notifications(userId,filter,page,size));}

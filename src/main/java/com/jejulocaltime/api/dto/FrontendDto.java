@@ -39,6 +39,7 @@ public final class FrontendDto {
             Integer totalAmount, OffsetDateTime soldAt) {}
     public record PriceApplyRequest(Integer price, Long recommendationId) {}
     public record UserUpdateRequest(String nickname, String profileImageUrl) {}
+    public record ProfileImageResponse(String profileImageUrl) {}
     public record NotificationResponse(Long id, String type, String title, String message, String referenceType,
             Long referenceId, boolean read, OffsetDateTime createdAt) {}
     public record NotificationSettings(boolean commonEvent, boolean sellerPayment, boolean sellerAiPrice,

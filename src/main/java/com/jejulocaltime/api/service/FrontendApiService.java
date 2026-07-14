@@ -1,6 +1,7 @@
 package com.jejulocaltime.api.service;
 
 import com.jejulocaltime.api.dto.FrontendDto.*;
+import com.jejulocaltime.api.common.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,11 +19,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import static org.springframework.http.HttpStatus.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
-@RequiredArgsConstructor
 public class FrontendApiService {
     private final JdbcTemplate jdbc;
+    private final FileStorage fileStorage;
+    @org.springframework.beans.factory.annotation.Autowired
+    public FrontendApiService(JdbcTemplate jdbc,FileStorage fileStorage){this.jdbc=jdbc;this.fileStorage=fileStorage;}
+    public FrontendApiService(JdbcTemplate jdbc){this.jdbc=jdbc;this.fileStorage=null;}
 
     private static OffsetDateTime time(ResultSet rs, String column) throws SQLException {
         return rs.getObject(column, OffsetDateTime.class);
@@ -30,6 +35,11 @@ public class FrontendApiService {
     private static Double decimal(ResultSet rs, String column) throws SQLException {
         Number value = (Number) rs.getObject(column);
         return value == null ? null : value.doubleValue();
+    }
+    private static List<String> strings(ResultSet rs, String column) throws SQLException {
+        var value=rs.getArray(column);
+        if(value==null)return List.of();
+        return java.util.Arrays.stream((Object[])value.getArray()).map(String::valueOf).toList();
     }
     private final RowMapper<ProductResponse> productMapper=(rs,n)->new ProductResponse(
             rs.getLong("id"),rs.getLong("seller_profile_id"),rs.getString("name"),rs.getString("business_name"),
@@ -39,11 +49,12 @@ public class FrontendApiService {
             rs.getInt("original_price")==0?0d:Math.round((1-rs.getDouble("current_price")/rs.getDouble("original_price"))*1000)/10d,
             time(rs,"available_start_at"),time(rs,"reservation_close_at"),rs.getString("address"),
             decimal(rs,"latitude"),decimal(rs,"longitude"),
-            time(rs,"reservation_close_at").isBefore(OffsetDateTime.now().plusHours(1)),null,List.of(),rs.getString("status"),
+            time(rs,"reservation_close_at").isBefore(OffsetDateTime.now().plusHours(1)),null,strings(rs,"image_urls"),rs.getString("status"),
             time(rs,"created_at"),time(rs,"updated_at"),rs.getBoolean("wishlisted"));
 
     private String productSelect() { return """
         SELECT p.*, sp.business_name,
+          ARRAY(SELECT pi.image_url FROM product_image pi WHERE pi.product_id=p.id ORDER BY pi.sort_order,pi.id) AS image_urls,
           EXISTS(SELECT 1 FROM wishlist w WHERE w.product_id=p.id AND w.user_id=?) AS wishlisted
         FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
         """; }
@@ -165,6 +176,14 @@ public class FrontendApiService {
     private long count(String sql,Object...args){Long v=jdbc.queryForObject(sql,Long.class,args);return v==null?0:v;}
 
     public void updateUser(Long userId,UserUpdateRequest request){jdbc.update("UPDATE users SET nickname=COALESCE(?,nickname),profile_image_url=COALESCE(?,profile_image_url),updated_at=now() WHERE id=?",request.nickname(),request.profileImageUrl(),userId);}
+    @Transactional
+    public ProfileImageResponse uploadProfileImage(Long userId,MultipartFile image){
+        if(image==null||image.isEmpty()||image.getContentType()==null||!image.getContentType().startsWith("image/"))throw new ResponseStatusException(BAD_REQUEST,"이미지 파일만 업로드할 수 있습니다.");
+        if(image.getSize()>10*1024*1024)throw new ResponseStatusException(BAD_REQUEST,"프로필 이미지는 10MB 이하여야 합니다.");
+        String url=fileStorage.store(image,"profiles/"+userId);
+        jdbc.update("UPDATE users SET profile_image_url=?,updated_at=now() WHERE id=?",url,userId);
+        return new ProfileImageResponse(url);
+    }
     @Transactional public ProductResponse applyPrice(Long userId,Long productId,PriceApplyRequest request){
         sellerProfileId(userId);
         if(request.price()==null||request.price()<1)throw new ResponseStatusException(BAD_REQUEST,"적용 가격은 1원 이상이어야 합니다.");
