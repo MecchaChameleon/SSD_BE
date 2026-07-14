@@ -12,4 +12,6 @@ public interface SellerApplicationRepository extends JpaRepository<SellerApplica
     
     // 이미 신청한 내역이 있는지 중복 검사용
     boolean existsByUserId(Long userId);
+
+    boolean existsByBusinessNumberAndUserIdNot(String businessNumber, Long userId);
 }

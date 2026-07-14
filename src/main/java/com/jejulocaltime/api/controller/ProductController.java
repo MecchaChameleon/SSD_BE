@@ -118,7 +118,7 @@ public class ProductController {
     }
 
     // 7. 상품/자원 삭제
-    @Operation(summary = "상품/자원 삭제", description = "진행 중인 예약이 없는 경우에만 본인 상품/자원을 삭제한다.")
+    @Operation(summary = "상품/자원 삭제", description = "판매자 확인 대기 중인 결제가 없는 경우에만 본인 상품/자원을 삭제한다.")
     @DeleteMapping("/{productId}")
     public ResponseEntity<ApiResponseTemplate<Void>> deleteProduct(
             @AuthenticationPrincipal Long userId,

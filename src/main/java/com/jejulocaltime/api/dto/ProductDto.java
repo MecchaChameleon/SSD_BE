@@ -42,7 +42,8 @@ public class ProductDto {
             Product.FootTrafficLevel foot,
             String address,
             Double lat,
-            Double lng
+            Double lng,
+            Product.Status status
     ) {}
 
     // [PATCH] 판매상태 변경

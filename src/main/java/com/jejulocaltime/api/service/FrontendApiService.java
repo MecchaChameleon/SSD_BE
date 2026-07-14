@@ -1,6 +1,7 @@
 package com.jejulocaltime.api.service;
 
 import com.jejulocaltime.api.dto.FrontendDto.*;
+import com.jejulocaltime.api.common.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,11 +19,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import static org.springframework.http.HttpStatus.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
-@RequiredArgsConstructor
 public class FrontendApiService {
     private final JdbcTemplate jdbc;
+    private final FileStorage fileStorage;
+    @org.springframework.beans.factory.annotation.Autowired
+    public FrontendApiService(JdbcTemplate jdbc,FileStorage fileStorage){this.jdbc=jdbc;this.fileStorage=fileStorage;}
+    public FrontendApiService(JdbcTemplate jdbc){this.jdbc=jdbc;this.fileStorage=null;}
 
     private static OffsetDateTime time(ResultSet rs, String column) throws SQLException {
         return rs.getObject(column, OffsetDateTime.class);
@@ -30,6 +35,11 @@ public class FrontendApiService {
     private static Double decimal(ResultSet rs, String column) throws SQLException {
         Number value = (Number) rs.getObject(column);
         return value == null ? null : value.doubleValue();
+    }
+    private static List<String> strings(ResultSet rs, String column) throws SQLException {
+        var value=rs.getArray(column);
+        if(value==null)return List.of();
+        return java.util.Arrays.stream((Object[])value.getArray()).map(String::valueOf).toList();
     }
     private final RowMapper<ProductResponse> productMapper=(rs,n)->new ProductResponse(
             rs.getLong("id"),rs.getLong("seller_profile_id"),rs.getString("name"),rs.getString("business_name"),
@@ -39,17 +49,18 @@ public class FrontendApiService {
             rs.getInt("original_price")==0?0d:Math.round((1-rs.getDouble("current_price")/rs.getDouble("original_price"))*1000)/10d,
             time(rs,"available_start_at"),time(rs,"reservation_close_at"),rs.getString("address"),
             decimal(rs,"latitude"),decimal(rs,"longitude"),
-            time(rs,"reservation_close_at").isBefore(OffsetDateTime.now().plusHours(1)),null,List.of(),rs.getString("status"),
+            time(rs,"reservation_close_at").isBefore(OffsetDateTime.now().plusHours(1)),null,strings(rs,"image_urls"),rs.getString("status"),
             time(rs,"created_at"),time(rs,"updated_at"),rs.getBoolean("wishlisted"));
 
     private String productSelect() { return """
         SELECT p.*, sp.business_name,
+          ARRAY(SELECT pi.image_url FROM product_image pi WHERE pi.product_id=p.id ORDER BY pi.sort_order,pi.id) AS image_urls,
           EXISTS(SELECT 1 FROM wishlist w WHERE w.product_id=p.id AND w.user_id=?) AS wishlisted
         FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
         """; }
 
     public PageResponse<ProductResponse> products(Long userId,String query,String businessType,String category,String sort,int page,int size) {
-        var sql=new StringBuilder(productSelect()+" WHERE p.status='ACTIVE' AND p.reservation_close_at>now() ");
+        var sql=new StringBuilder(productSelect()+" WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now() ");
         var args=new ArrayList<Object>(); args.add(userId==null?-1L:userId);
         if(query!=null&&!query.isBlank()){sql.append("AND (lower(p.name) LIKE lower(?) OR lower(sp.business_name) LIKE lower(?)) ");args.add("%"+query+"%");args.add("%"+query+"%");}
         if(businessType!=null){sql.append("AND p.business_type=? ");args.add(businessType);}
@@ -57,7 +68,7 @@ public class FrontendApiService {
         String order=switch(sort==null?"":sort){case "DEADLINE_ASC"->"p.reservation_close_at ASC";case "DISCOUNT_DESC"->"(p.original_price-p.current_price) DESC";case "PRICE_ASC"->"p.current_price ASC";default->"p.created_at DESC";};
         sql.append("ORDER BY ").append(order).append(" LIMIT ? OFFSET ?");args.add(size);args.add(page*size);
         var content=jdbc.query(sql.toString(),productMapper,args.toArray());
-        var countSql=new StringBuilder("SELECT count(*) FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.status='ACTIVE' AND p.reservation_close_at>now() ");
+        var countSql=new StringBuilder("SELECT count(*) FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now() ");
         var countArgs=new ArrayList<Object>();
         if(query!=null&&!query.isBlank()){countSql.append("AND (lower(p.name) LIKE lower(?) OR lower(sp.business_name) LIKE lower(?)) ");countArgs.add("%"+query+"%");countArgs.add("%"+query+"%");}
         if(businessType!=null){countSql.append("AND p.business_type=? ");countArgs.add(businessType);}
@@ -80,7 +91,7 @@ public class FrontendApiService {
             SELECT p.id,p.name,sp.business_name,p.category,p.original_price,p.current_price,
                    p.latitude,p.longitude,p.address,p.reservation_close_at
             FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
-            WHERE p.status='ACTIVE' AND p.reservation_close_at>now()
+            WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now()
               AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
             """);
         var args=new ArrayList<Object>();
@@ -93,27 +104,30 @@ public class FrontendApiService {
     public ProductResponse product(Long userId,Long id){try{return jdbc.queryForObject(productSelect()+" WHERE p.id=?",productMapper,userId==null?-1L:userId,id);}catch(EmptyResultDataAccessException e){throw new ResponseStatusException(NOT_FOUND,"상품을 찾을 수 없습니다.");}}
 
     @Transactional
-    public ReservationResponse purchase(Long userId, PurchaseRequest request){return createReservation(userId,request.productId(),request.quantity(),null,null,true);}
-    @Transactional
-    public ReservationResponse reserve(Long userId, ReservationCreateRequest request){return createReservation(userId,request.productId(),request.quantity(),request.visitStartAt(),request.visitEndAt(),false);}
-    private ReservationResponse createReservation(Long userId,Long productId,Integer quantity,OffsetDateTime start,OffsetDateTime end,boolean immediate){
+    public PurchaseResponse purchase(Long userId, PurchaseRequest request){
+        Long productId=request.productId();Integer quantity=request.quantity();
         if(quantity==null||quantity<1)throw new ResponseStatusException(BAD_REQUEST,"수량은 1개 이상이어야 합니다.");
-        var p=jdbc.queryForMap("SELECT id,current_price,remaining_quantity,status,reservation_close_at FROM product WHERE id=? FOR UPDATE",productId);
+        var p=jdbc.queryForMap("SELECT id,current_price,remaining_quantity,status,(reservation_close_at>now()) AS sale_open FROM product WHERE id=? FOR UPDATE",productId);
+        if("ACTIVE".equals(p.get("status"))&&!Boolean.TRUE.equals(p.get("sale_open"))){
+            throw new ResponseStatusException(CONFLICT,"판매가 종료된 상품입니다.");
+        }
         if(!"ACTIVE".equals(p.get("status")))throw new ResponseStatusException(CONFLICT,"판매 중인 상품이 아닙니다.");
         if(((Number)p.get("remaining_quantity")).intValue()<quantity)throw new ResponseStatusException(CONFLICT,"판매 가능한 수량이 부족합니다.");
-        int unit=((Number)p.get("current_price")).intValue(); String status=immediate?"COMPLETED":"REQUESTED";
-        Long id=jdbc.queryForObject("INSERT INTO reservation(product_id,user_id,quantity,unit_price,total_amount,visit_start_at,visit_end_at,status,requested_at,completed_at,updated_at) VALUES(?,?,?,?,?,?,?,?,now(),CASE WHEN ? THEN now() ELSE null END,now()) RETURNING id",Long.class,productId,userId,quantity,unit,unit*quantity,start,end,status,immediate);
-        if(immediate)jdbc.update("UPDATE product SET remaining_quantity=remaining_quantity-?, status=CASE WHEN remaining_quantity-?=0 THEN 'CLOSED' ELSE status END WHERE id=?",quantity,quantity,productId);
-        if(!immediate){Long sellerId=jdbc.queryForObject("SELECT sp.user_id FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.id=?",Long.class,productId);notify(sellerId,"RESERVATION_REQUESTED","새로운 예약 요청이 들어왔습니다!","상품 예약 요청을 확인해주세요.","RESERVATION",id);}
-        return reservation(userId,id,false);
+        int unit=((Number)p.get("current_price")).intValue();
+        Long id=jdbc.queryForObject("INSERT INTO reservation(product_id,user_id,quantity,unit_price,total_amount,status,payment_status,requested_at,updated_at) VALUES(?,?,?,?,?,'REQUESTED','PAID',now(),now()) RETURNING id",Long.class,productId,userId,quantity,unit,unit*quantity);
+        jdbc.update("UPDATE product SET remaining_quantity=remaining_quantity-?, status=CASE WHEN remaining_quantity-?<=0 THEN 'PAUSED' ELSE status END, updated_at=now() WHERE id=?",quantity,quantity,productId);
+        Long sellerId=jdbc.queryForObject("SELECT sp.user_id FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.id=?",Long.class,productId);
+        notify(sellerId,"PAYMENT_PENDING","새로운 결제가 접수되었습니다.","결제 내역을 확인하고 수락 또는 환불 처리해주세요.","PAYMENT",id);
+        return purchase(userId,id,false);
     }
-    public PageResponse<ReservationResponse> buyerReservations(Long userId,String status,int page,int size){String where=" WHERE r.user_id=? AND NOT r.hidden_by_buyer "+(status==null?"":"AND r.status=? ");List<Object>a=new ArrayList<>();a.add(userId);if(status!=null)a.add(status);a.add(size);a.add(page*size);var list=jdbc.query(reservationSql()+where+" ORDER BY r.requested_at DESC LIMIT ? OFFSET ?",reservationMapper,a.toArray());Long total=jdbc.queryForObject("SELECT count(*) FROM reservation r"+where,Long.class,status==null?new Object[]{userId}:new Object[]{userId,status});return page(list,page,size,total);}
-    public ReservationResponse reservation(Long userId,Long id,boolean seller){String owner=seller?"sp.user_id=?":"r.user_id=?";try{return jdbc.queryForObject(reservationSql()+" WHERE r.id=? AND "+owner,reservationMapper,id,userId);}catch(EmptyResultDataAccessException e){throw new ResponseStatusException(NOT_FOUND,"예약을 찾을 수 없습니다.");}}
-    @Transactional public ReservationResponse cancel(Long userId,Long id,String reason){var old=reservation(userId,id,false);if(!List.of("REQUESTED","APPROVED").contains(old.status()))throw new ResponseStatusException(CONFLICT,"취소할 수 없는 예약입니다.");jdbc.update("UPDATE reservation SET status='CANCELED',cancel_reason=?,canceled_at=now(),updated_at=now() WHERE id=?",reason,id);if("APPROVED".equals(old.status()))jdbc.update("UPDATE product SET remaining_quantity=remaining_quantity+?,status='ACTIVE' WHERE id=?",old.quantity(),old.productId());return reservation(userId,id,false);}
-    public void hide(Long userId,Long id){jdbc.update("UPDATE reservation SET hidden_by_buyer=true WHERE id=? AND user_id=? AND status IN ('REJECTED','CANCELED','COMPLETED','NO_SHOW')",id,userId);}
+    public PageResponse<PurchaseResponse> buyerPurchases(Long userId,String status,int page,int size){String dbStatus=dbPurchaseStatus(status);String where=" WHERE r.user_id=? AND NOT r.hidden_by_buyer AND r.payment_status IN ('PAID','REFUNDED') "+(dbStatus==null?"":"AND r.status=? ");List<Object>a=new ArrayList<>();a.add(userId);if(dbStatus!=null)a.add(dbStatus);a.add(size);a.add(page*size);var list=jdbc.query(purchaseSql()+where+" ORDER BY r.requested_at DESC LIMIT ? OFFSET ?",purchaseMapper,a.toArray());List<Object>countArgs=new ArrayList<>();countArgs.add(userId);if(dbStatus!=null)countArgs.add(dbStatus);long total=count("SELECT count(*) FROM reservation r"+where,countArgs.toArray());return page(list,page,size,total);}
+    public PurchaseResponse purchase(Long userId,Long id,boolean seller){String owner=seller?"sp.user_id=?":"r.user_id=?";try{return jdbc.queryForObject(purchaseSql()+" WHERE r.id=? AND "+owner,purchaseMapper,id,userId);}catch(EmptyResultDataAccessException e){throw new ResponseStatusException(NOT_FOUND,"결제 내역을 찾을 수 없습니다.");}}
+    @Transactional public void hidePurchase(Long userId,Long id){var old=purchase(userId,id,false);if(!List.of("ACCEPTED","REFUNDED").contains(old.status()))throw new ResponseStatusException(CONFLICT,"판매 수락 또는 환불 완료된 결제 내역만 삭제할 수 있습니다.");jdbc.update("UPDATE reservation SET hidden_by_buyer=true,updated_at=now() WHERE id=? AND user_id=?",id,userId);}
 
-    private String reservationSql(){return "SELECT r.*,p.name product_name,sp.business_name,u.nickname buyer_nickname FROM reservation r JOIN product p ON p.id=r.product_id JOIN seller_profile sp ON sp.id=p.seller_profile_id JOIN users u ON u.id=r.user_id";}
-    private final RowMapper<ReservationResponse> reservationMapper=(r,n)->new ReservationResponse(r.getLong("id"),r.getLong("product_id"),r.getString("product_name"),r.getString("business_name"),r.getLong("user_id"),r.getString("buyer_nickname"),r.getInt("quantity"),r.getInt("unit_price"),r.getInt("total_amount"),time(r,"visit_start_at"),time(r,"visit_end_at"),r.getString("status"),r.getString("cancel_reason"),time(r,"requested_at"));
+    private String purchaseSql(){return "SELECT r.*,p.name product_name,sp.business_name,u.nickname buyer_nickname FROM reservation r JOIN product p ON p.id=r.product_id JOIN seller_profile sp ON sp.id=p.seller_profile_id JOIN users u ON u.id=r.user_id";}
+    private String purchaseStatus(String status,String paymentStatus){if("COMPLETED".equals(status)&&"PAID".equals(paymentStatus))return "ACCEPTED";if("REJECTED".equals(status)&&"REFUNDED".equals(paymentStatus))return "REFUNDED";return "PENDING";}
+    private String dbPurchaseStatus(String status){if(status==null)return null;return switch(status){case "PENDING"->"REQUESTED";case "ACCEPTED"->"COMPLETED";case "REFUNDED"->"REJECTED";default->throw new ResponseStatusException(BAD_REQUEST,"지원하지 않는 결제 상태입니다.");};}
+    private final RowMapper<PurchaseResponse> purchaseMapper=(r,n)->new PurchaseResponse(r.getLong("id"),r.getLong("product_id"),r.getString("product_name"),r.getString("business_name"),r.getLong("user_id"),r.getString("buyer_nickname"),r.getInt("quantity"),r.getInt("unit_price"),r.getInt("total_amount"),purchaseStatus(r.getString("status"),r.getString("payment_status")),r.getString("cancel_reason"),time(r,"requested_at"),r.getString("payment_status"));
     private <T> PageResponse<T> page(List<T> list,int page,int size,long total){return new PageResponse<>(list,page,size,total,(int)Math.ceil(total/(double)size),(page+1)*size>=total);}
 
     public PageResponse<ProductResponse> wishlist(Long userId,int page,int size){var list=jdbc.query(productSelect()+" JOIN wishlist own_w ON own_w.product_id=p.id AND own_w.user_id=? ORDER BY own_w.created_at DESC LIMIT ? OFFSET ?",productMapper,userId,userId,size,page*size);Long total=jdbc.queryForObject("SELECT count(*) FROM wishlist WHERE user_id=?",Long.class,userId);return page(list,page,size,total);}
@@ -121,14 +135,55 @@ public class FrontendApiService {
     public void removeWish(Long userId,Long productId){jdbc.update("DELETE FROM wishlist WHERE user_id=? AND product_id=?",userId,productId);}
 
     private Long sellerProfileId(Long userId){try{return jdbc.queryForObject("SELECT id FROM seller_profile WHERE user_id=?",Long.class,userId);}catch(EmptyResultDataAccessException e){throw new ResponseStatusException(FORBIDDEN,"승인된 판매자 프로필이 필요합니다.");}}
-    public PageResponse<ReservationResponse> sellerReservations(Long userId,String status,LocalDate date,int page,int size){Long sp=sellerProfileId(userId);String where=" WHERE p.seller_profile_id=? "+(status==null?"":"AND r.status=? ")+(date==null?"":"AND r.requested_at::date=? ");List<Object>a=new ArrayList<>();a.add(sp);if(status!=null)a.add(status);if(date!=null)a.add(date);a.add(size);a.add(page*size);var list=jdbc.query(reservationSql()+where+" ORDER BY r.requested_at DESC LIMIT ? OFFSET ?",reservationMapper,a.toArray());return page(list,page,size,list.size());}
-    @Transactional public ReservationResponse sellerAction(Long userId,Long id,String action,String reason){var old=reservation(userId,id,true);String required=List.of("approve","reject").contains(action)?"REQUESTED":"APPROVED";if(!required.equals(old.status()))throw new ResponseStatusException(CONFLICT,"현재 예약 상태에서는 처리할 수 없습니다.");String next=switch(action){case "approve"->"APPROVED";case "reject"->"REJECTED";case "complete"->"COMPLETED";case "no-show"->"NO_SHOW";default->throw new ResponseStatusException(BAD_REQUEST,"지원하지 않는 처리입니다.");};if("approve".equals(action)){var remain=jdbc.queryForObject("SELECT remaining_quantity FROM product WHERE id=? FOR UPDATE",Integer.class,old.productId());if(remain==null||remain<old.quantity())throw new ResponseStatusException(CONFLICT,"재고가 부족합니다.");jdbc.update("UPDATE product SET remaining_quantity=remaining_quantity-? WHERE id=?",old.quantity(),old.productId());}jdbc.update("UPDATE reservation SET status=?,cancel_reason=COALESCE(?,cancel_reason),approved_at=CASE WHEN ?='APPROVED' THEN now() ELSE approved_at END,rejected_at=CASE WHEN ?='REJECTED' THEN now() ELSE rejected_at END,completed_at=CASE WHEN ?='COMPLETED' THEN now() ELSE completed_at END,updated_at=now() WHERE id=?",next,reason,next,next,next,id);if("APPROVED".equals(next)||"REJECTED".equals(next))notify(old.buyerId(),"APPROVED".equals(next)?"RESERVATION_APPROVED":"RESERVATION_REJECTED","APPROVED".equals(next)?"예약이 승인되었습니다.":"예약이 거절되었습니다.",reason,"RESERVATION",id);return reservation(userId,id,true);}
+    public PageResponse<PurchaseResponse> sellerPayments(Long userId,String status,LocalDate date,int page,int size){Long sp=sellerProfileId(userId);String dbStatus=dbPurchaseStatus(status);String dateFilter=date==null?"":"AND ((r.status='REQUESTED' AND (r.requested_at AT TIME ZONE 'Asia/Seoul')::date=?) OR (r.status='COMPLETED' AND (r.completed_at AT TIME ZONE 'Asia/Seoul')::date=?) OR (r.status='REJECTED' AND (r.rejected_at AT TIME ZONE 'Asia/Seoul')::date=?)) ";String where=" WHERE p.seller_profile_id=? AND r.payment_status IN ('PAID','REFUNDED') "+(dbStatus==null?"":"AND r.status=? ")+dateFilter;List<Object>a=new ArrayList<>();a.add(sp);if(dbStatus!=null)a.add(dbStatus);if(date!=null){a.add(date);a.add(date);a.add(date);}List<Object>countArgs=new ArrayList<>(a);a.add(size);a.add(page*size);var list=jdbc.query(purchaseSql()+where+" ORDER BY COALESCE(r.completed_at,r.rejected_at,r.requested_at) DESC LIMIT ? OFFSET ?",purchaseMapper,a.toArray());long total=count("SELECT count(*) FROM reservation r JOIN product p ON p.id=r.product_id"+where,countArgs.toArray());return page(list,page,size,total);}
+    @Transactional public PurchaseResponse sellerPaymentAction(Long userId,Long id,boolean accept,String reason){var old=purchase(userId,id,true);var locked=jdbc.queryForMap("SELECT r.status,r.payment_status FROM reservation r JOIN product p ON p.id=r.product_id JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE r.id=? AND sp.user_id=? FOR UPDATE OF r",id,userId);if(!"REQUESTED".equals(locked.get("status"))||!"PAID".equals(locked.get("payment_status")))throw new ResponseStatusException(CONFLICT,"판매자 확인 대기 중인 결제만 처리할 수 있습니다.");if(accept){jdbc.update("UPDATE reservation SET status='COMPLETED',approved_at=now(),completed_at=now(),updated_at=now() WHERE id=?",id);notify(old.buyerId(),"PAYMENT_ACCEPTED","결제가 수락되었습니다.","판매자가 결제를 확인하고 판매를 수락했습니다.","PAYMENT",id);}else{if(reason==null||reason.isBlank())throw new ResponseStatusException(BAD_REQUEST,"환불 사유를 입력해주세요.");jdbc.update("UPDATE reservation SET status='REJECTED',payment_status='REFUNDED',cancel_reason=?,rejected_at=now(),canceled_at=now(),updated_at=now() WHERE id=?",reason,id);jdbc.update("UPDATE product SET remaining_quantity=remaining_quantity+?,status=CASE WHEN reservation_close_at>now() THEN 'ACTIVE' ELSE 'CLOSED' END,updated_at=now() WHERE id=?",old.quantity(),old.productId());notify(old.buyerId(),"PAYMENT_REFUNDED","결제가 환불되었습니다.",reason,"PAYMENT",id);}return purchase(userId,id,true);}
 
-    public DashboardResponse dashboard(Long userId,LocalDate date){Long sp=sellerProfileId(userId);long req=count("SELECT count(*) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='REQUESTED' AND r.requested_at::date=?",sp,date);long app=count("SELECT count(*) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='APPROVED' AND r.requested_at::date=?",sp,date);long no=count("SELECT count(*) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='NO_SHOW' AND r.requested_at::date=?",sp,date);long daily=count("SELECT COALESCE(sum(r.total_amount),0) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.completed_at::date=?",sp,date);long products=count("SELECT count(*) FROM product WHERE seller_profile_id=?",sp);return new DashboardResponse(date,new ReservationCounts(req,app,no),daily,daily,products);}
-    public SalesReportResponse sales(Long userId,LocalDate start,LocalDate end,String sort){Long sp=sellerProfileId(userId);String order="REVENUE_ASC".equals(sort)?"revenue ASC":"revenue DESC";var items=jdbc.query("SELECT p.id,p.name,sum(r.quantity) quantity,sum(r.total_amount) revenue FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.completed_at::date BETWEEN ? AND ? GROUP BY p.id,p.name ORDER BY "+order,(r,n)->new SalesItem(r.getLong(1),r.getString(2),r.getLong(3),r.getLong(4)),sp,start,end);long revenue=items.stream().mapToLong(SalesItem::revenue).sum(),qty=items.stream().mapToLong(SalesItem::quantity).sum();return new SalesReportResponse(start,end,revenue,qty,items);}
+    public DashboardResponse dashboard(Long userId,LocalDate date){Long sp=sellerProfileId(userId);long pending=count("SELECT count(*) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='REQUESTED' AND r.payment_status='PAID'",sp);long accepted=count("SELECT count(*) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.payment_status='PAID' AND (r.completed_at AT TIME ZONE 'Asia/Seoul')::date=?",sp,date);long refunded=count("SELECT count(*) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='REJECTED' AND r.payment_status='REFUNDED' AND (r.rejected_at AT TIME ZONE 'Asia/Seoul')::date=?",sp,date);long gross=count("SELECT COALESCE(sum(r.total_amount),0) FROM reservation r JOIN product p ON p.id=r.product_id LEFT JOIN seller_settlement_reservation ssr ON ssr.reservation_id=r.id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.payment_status='PAID' AND ssr.reservation_id IS NULL AND (r.completed_at AT TIME ZONE 'Asia/Seoul')::date=?",sp,date);long daily=gross-Math.round(gross*.03)-Math.round(gross*.02);long period=count("SELECT COALESCE(sum(r.total_amount),0) FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.payment_status='PAID'",sp);long products=count("SELECT count(*) FROM product WHERE seller_profile_id=?",sp);return new DashboardResponse(date,new PaymentCounts(pending,accepted,refunded),daily,period,products);}
+    public SalesReportResponse sales(Long userId,LocalDate start,LocalDate end,String sort){
+        if(start.isAfter(end))throw new ResponseStatusException(BAD_REQUEST,"시작일은 종료일 이후일 수 없습니다.");
+        Long sp=sellerProfileId(userId);String order="REVENUE_ASC".equals(sort)?"revenue ASC":"revenue DESC";
+        String sold=" FROM reservation r JOIN product p ON p.id=r.product_id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.payment_status='PAID' AND (r.completed_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN ? AND ? ";
+        var items=jdbc.query("SELECT p.id,p.name,sum(r.quantity) quantity,sum(r.total_amount) revenue"+sold+"GROUP BY p.id,p.name ORDER BY "+order,(r,n)->new SalesItem(r.getLong(1),r.getString(2),r.getLong(3),r.getLong(4)),sp,start,end);
+        long revenue=items.stream().mapToLong(SalesItem::revenue).sum(),qty=items.stream().mapToLong(SalesItem::quantity).sum();
+        long available=count("SELECT COALESCE(sum(r.total_amount),0) FROM reservation r JOIN product p ON p.id=r.product_id LEFT JOIN seller_settlement_reservation ssr ON ssr.reservation_id=r.id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.payment_status='PAID' AND ssr.reservation_id IS NULL AND (r.completed_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN ? AND ?",sp,start,end);
+        var account=jdbc.queryForMap("SELECT bank_name,account_number FROM seller_profile WHERE id=?",sp);
+        return new SalesReportResponse(start,end,revenue,available,qty,items,(String)account.get("bank_name"),(String)account.get("account_number"));
+    }
+    @Transactional
+    public SettlementResponse settle(Long userId,SettlementRequest request){
+        if(request.startDate()==null||request.endDate()==null||request.startDate().isAfter(request.endDate()))throw new ResponseStatusException(BAD_REQUEST,"올바른 정산 기간을 입력해 주세요.");
+        Long sp=sellerProfileId(userId);
+        var account=jdbc.queryForMap("SELECT bank_name,account_number FROM seller_profile WHERE id=? FOR UPDATE",sp);
+        if(account.get("bank_name")==null||account.get("account_number")==null)throw new ResponseStatusException(CONFLICT,"정산 계좌를 먼저 등록해 주세요.");
+        var ids=jdbc.queryForList("SELECT r.id FROM reservation r JOIN product p ON p.id=r.product_id LEFT JOIN seller_settlement_reservation ssr ON ssr.reservation_id=r.id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.payment_status='PAID' AND ssr.reservation_id IS NULL AND (r.completed_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN ? AND ? ORDER BY r.id FOR UPDATE OF r",Long.class,sp,request.startDate(),request.endDate());
+        if(ids.isEmpty())throw new ResponseStatusException(CONFLICT,"정산 가능한 금액이 없습니다.");
+        long gross=ids.stream().mapToLong(id->count("SELECT total_amount FROM reservation WHERE id=?",id)).sum();
+        long platform=Math.round(gross*.03),payment=Math.round(gross*.02),net=gross-platform-payment;
+        Long id=jdbc.queryForObject("INSERT INTO seller_settlement(seller_profile_id,gross_amount,platform_fee,payment_fee,settlement_amount,bank_name,account_number) VALUES(?,?,?,?,?,?,?) RETURNING id",Long.class,sp,gross,platform,payment,net,account.get("bank_name"),account.get("account_number"));
+        ids.forEach(reservationId->jdbc.update("INSERT INTO seller_settlement_reservation(settlement_id,reservation_id) VALUES(?,?)",id,reservationId));
+        OffsetDateTime requestedAt=jdbc.queryForObject("SELECT requested_at FROM seller_settlement WHERE id=?",(r,n)->r.getObject(1,OffsetDateTime.class),id);
+        return new SettlementResponse(id,gross,platform,payment,net,"REQUESTED",requestedAt);
+    }
+    public PageResponse<SalesHistoryItem> salesHistory(Long userId,LocalDate start,LocalDate end,int page,int size){
+        if(start.isAfter(end))throw new ResponseStatusException(BAD_REQUEST,"시작일은 종료일보다 이후일 수 없습니다.");
+        int safePage=Math.max(page,0),safeSize=Math.min(Math.max(size,1),100);
+        Long sp=sellerProfileId(userId);
+        String from=" FROM reservation r JOIN product p ON p.id=r.product_id JOIN users u ON u.id=r.user_id WHERE p.seller_profile_id=? AND r.status='COMPLETED' AND r.payment_status='PAID' AND (r.completed_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN ? AND ? ";
+        var items=jdbc.query("SELECT r.id purchase_id,p.id product_id,p.name product_name,u.id buyer_id,u.nickname buyer_nickname,r.quantity,r.unit_price,r.total_amount,r.completed_at"+from+"ORDER BY r.completed_at DESC,r.id DESC LIMIT ? OFFSET ?",(r,n)->new SalesHistoryItem(r.getLong("purchase_id"),r.getLong("product_id"),r.getString("product_name"),r.getLong("buyer_id"),r.getString("buyer_nickname"),r.getInt("quantity"),r.getInt("unit_price"),r.getInt("total_amount"),time(r,"completed_at")),sp,start,end,safeSize,safePage*safeSize);
+        long total=count("SELECT count(*)"+from,sp,start,end);
+        return page(items,safePage,safeSize,total);
+    }
     private long count(String sql,Object...args){Long v=jdbc.queryForObject(sql,Long.class,args);return v==null?0:v;}
 
     public void updateUser(Long userId,UserUpdateRequest request){jdbc.update("UPDATE users SET nickname=COALESCE(?,nickname),profile_image_url=COALESCE(?,profile_image_url),updated_at=now() WHERE id=?",request.nickname(),request.profileImageUrl(),userId);}
+    @Transactional
+    public ProfileImageResponse uploadProfileImage(Long userId,MultipartFile image){
+        if(image==null||image.isEmpty()||image.getContentType()==null||!image.getContentType().startsWith("image/"))throw new ResponseStatusException(BAD_REQUEST,"이미지 파일만 업로드할 수 있습니다.");
+        if(image.getSize()>10*1024*1024)throw new ResponseStatusException(BAD_REQUEST,"프로필 이미지는 10MB 이하여야 합니다.");
+        String url=fileStorage.store(image,"profiles/"+userId);
+        jdbc.update("UPDATE users SET profile_image_url=?,updated_at=now() WHERE id=?",url,userId);
+        return new ProfileImageResponse(url);
+    }
     @Transactional public ProductResponse applyPrice(Long userId,Long productId,PriceApplyRequest request){
         sellerProfileId(userId);
         if(request.price()==null||request.price()<1)throw new ResponseStatusException(BAD_REQUEST,"적용 가격은 1원 이상이어야 합니다.");
@@ -147,7 +202,7 @@ public class FrontendApiService {
     public void readNotification(Long userId,Long id){jdbc.update("UPDATE notification SET is_read=true,read_at=now() WHERE id=? AND user_id=?",id,userId);}
     public void readAll(Long userId){jdbc.update("UPDATE notification SET is_read=true,read_at=COALESCE(read_at,now()) WHERE user_id=?",userId);}
     public NotificationSettings settings(Long userId){jdbc.update("INSERT INTO notification_setting(user_id) VALUES(?) ON CONFLICT DO NOTHING",userId);return jdbc.queryForObject("SELECT * FROM notification_setting WHERE user_id=?",(r,n)->new NotificationSettings(r.getBoolean("common_event"),r.getBoolean("seller_reservation"),r.getBoolean("seller_ai_price"),r.getBoolean("seller_settlement"),r.getBoolean("buyer_deadline"),r.getBoolean("buyer_reservation_approved")),userId);}
-    public NotificationSettings updateSettings(Long userId,NotificationSettings s){jdbc.update("INSERT INTO notification_setting(user_id,common_event,seller_reservation,seller_ai_price,seller_settlement,buyer_deadline,buyer_reservation_approved) VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET common_event=EXCLUDED.common_event,seller_reservation=EXCLUDED.seller_reservation,seller_ai_price=EXCLUDED.seller_ai_price,seller_settlement=EXCLUDED.seller_settlement,buyer_deadline=EXCLUDED.buyer_deadline,buyer_reservation_approved=EXCLUDED.buyer_reservation_approved,updated_at=now()",userId,s.commonEvent(),s.sellerReservation(),s.sellerAiPrice(),s.sellerSettlement(),s.buyerDeadline(),s.buyerReservationApproved());return settings(userId);}
+    public NotificationSettings updateSettings(Long userId,NotificationSettings s){jdbc.update("INSERT INTO notification_setting(user_id,common_event,seller_reservation,seller_ai_price,seller_settlement,buyer_deadline,buyer_reservation_approved) VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET common_event=EXCLUDED.common_event,seller_reservation=EXCLUDED.seller_reservation,seller_ai_price=EXCLUDED.seller_ai_price,seller_settlement=EXCLUDED.seller_settlement,buyer_deadline=EXCLUDED.buyer_deadline,buyer_reservation_approved=EXCLUDED.buyer_reservation_approved,updated_at=now()",userId,s.commonEvent(),s.sellerPayment(),s.sellerAiPrice(),s.sellerSettlement(),s.buyerDeadline(),s.buyerPaymentResult());return settings(userId);}
     public void pushToken(Long userId,PushTokenRequest r){jdbc.update("INSERT INTO push_token(user_id,device_token,platform) VALUES(?,?,?) ON CONFLICT(device_token) DO UPDATE SET user_id=EXCLUDED.user_id,platform=EXCLUDED.platform,updated_at=now()",userId,r.deviceToken(),r.platform());}
     public void removePushToken(Long userId,String token){jdbc.update("DELETE FROM push_token WHERE user_id=? AND device_token=?",userId,token);}
     private void notify(Long userId,String type,String title,String message,String referenceType,Long referenceId){if(userId!=null)jdbc.update("INSERT INTO notification(user_id,type,title,message,reference_type,reference_id,is_read,created_at) VALUES(?,?,?,?,?,?,false,now())",userId,type,title,message,referenceType,referenceId);}

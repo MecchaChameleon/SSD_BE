@@ -29,10 +29,10 @@ public class SellerProfile {
     private Long sellerApplicationId;
 
     // 신청서에서 복사해 올 변하지 않는 정보들 (수정 불가)
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private String businessName;
 
-    @Column(nullable = false, unique = true, updatable = false)
+    @Column(nullable = false, unique = true)
     private String businessNumber;
 
     @Column(nullable = false, updatable = false)
