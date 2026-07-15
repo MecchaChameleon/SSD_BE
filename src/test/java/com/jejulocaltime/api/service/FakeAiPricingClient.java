@@ -26,7 +26,9 @@ public class FakeAiPricingClient implements AiPricingClient {
             List.of(new AiPriceResponse.Explanation("remaining_ratio", "잔여 수량", 0.5, "5개", -500.0, "DOWN")),
             "현재 26.2°C · 강수 0.0mm · 바람 1.2m/s",
             new AiPriceResponse.Weather(26.2, 0.0, 1.2, 26.0, 0.0, 2.0,
-                    "KMA_ULTRA_SHORT", "2026-07-16T18:00:00+09:00")
+                    "KMA_ULTRA_SHORT", "2026-07-16T18:00:00+09:00"),
+            new AiPriceResponse.RegionalDemand("애월읍", 0.72, 18420,
+                    "DAILY_FLOW_EBM_3Y", "2026-07-16", "2023-06-02", "2026-05-31")
     );
 
     public static final AiStrategyResponse DEFAULT_STRATEGY_RESPONSE =

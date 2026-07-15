@@ -115,10 +115,17 @@ public class ProductPricingService {
                 response.weather().forecastPrecipitation(), response.weather().forecastWindSpeed(),
                 response.weather().source(), response.weather().observedAt()
         );
+        ProductPriceDto.RegionalDemand regionalDemand = response.regionalDemand() == null ? null :
+                new ProductPriceDto.RegionalDemand(
+                        response.regionalDemand().region(), response.regionalDemand().percentile(),
+                        response.regionalDemand().predictedVisitPopulation(), response.regionalDemand().source(),
+                        response.regionalDemand().basisDate(), response.regionalDemand().trainingStartDate(),
+                        response.regionalDemand().trainingEndDate()
+                );
         return new ProductPriceDto.Response(
                 response.currentPrice(), response.discountPct(), response.minutesLeft(), timeline,
                 response.confidence(), response.modelVersion(), response.reason(), response.explanationMethod(),
-                explanations, response.weatherSummary(), weather,
+                explanations, response.weatherSummary(), weather, regionalDemand,
                 state.enabled(), state.lastUpdatedAt(), state.nextUpdateAt()
         );
     }

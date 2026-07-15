@@ -20,6 +20,7 @@ public class ProductPriceDto {
             List<Explanation> explanations,
             String weatherSummary,
             Weather weather,
+            RegionalDemand regionalDemand,
             boolean autoPricingEnabled,
             String lastUpdatedAt,
             String nextUpdateAt
@@ -48,6 +49,16 @@ public class ProductPriceDto {
             Double forecastWindSpeed,
             String source,
             String observedAt
+    ) {}
+
+    public record RegionalDemand(
+            String region,
+            Double percentile,
+            Integer predictedVisitPopulation,
+            String source,
+            String basisDate,
+            String trainingStartDate,
+            String trainingEndDate
     ) {}
 
     public record AutoPricingRequest(boolean enabled) {}

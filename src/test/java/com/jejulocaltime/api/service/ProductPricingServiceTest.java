@@ -74,6 +74,8 @@ class ProductPricingServiceTest {
         assertThat(response.priceTimeline().get(0).time()).isEqualTo("18:00");
         assertThat(response.weather().source()).isEqualTo("KMA_ULTRA_SHORT");
         assertThat(response.weather().currentTemperature()).isEqualTo(26.2);
+        assertThat(response.regionalDemand().region()).isEqualTo("애월읍");
+        assertThat(response.regionalDemand().source()).isEqualTo("DAILY_FLOW_EBM_3Y");
     }
 
     @Test
