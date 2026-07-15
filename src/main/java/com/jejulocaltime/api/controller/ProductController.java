@@ -140,6 +140,16 @@ public class ProductController {
         return ApiResponseTemplate.success(HttpStatus.CREATED, response);
     }
 
+    @Operation(summary = "상품 이미지 교체", description = "유지할 기존 이미지와 새 이미지를 합쳐 상품 이미지 목록을 교체한다.")
+    @PutMapping("/{productId}/images")
+    public ResponseEntity<ApiResponseTemplate<ProductImageDto.UploadResponse>> replaceImages(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long productId,
+            @RequestParam(name = "retainedUrls", required = false) List<String> retainedUrls,
+            @RequestPart(name = "images", required = false) List<MultipartFile> images) {
+        return ApiResponseTemplate.success(productImageService.replaceImages(userId, productId, retainedUrls, images));
+    }
+
     // 9. 판매상태 변경
     @Operation(summary = "판매상태 변경", description = "본인 상품/자원의 판매상태(ACTIVE/PAUSED/CLOSED)를 변경한다.")
     @PatchMapping("/{productId}/status")
