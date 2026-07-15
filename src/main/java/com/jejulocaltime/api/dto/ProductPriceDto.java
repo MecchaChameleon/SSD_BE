@@ -33,6 +33,7 @@ public class ProductPriceDto {
             String feature,
             String label,
             Double value,
+            String displayValue,
             Double impact,
             String direction
     ) {}

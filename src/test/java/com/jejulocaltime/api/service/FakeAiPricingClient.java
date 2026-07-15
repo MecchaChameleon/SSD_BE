@@ -23,7 +23,7 @@ public class FakeAiPricingClient implements AiPricingClient {
             "test-model",
             "테스트 설명",
             "SHAP_PERMUTATION",
-            List.of(new AiPriceResponse.Explanation("remaining_ratio", "잔여 수량", 0.5, -500.0, "DOWN")),
+            List.of(new AiPriceResponse.Explanation("remaining_ratio", "잔여 수량", 0.5, "5개", -500.0, "DOWN")),
             "맑음"
     );
 

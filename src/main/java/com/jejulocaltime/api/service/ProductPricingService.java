@@ -107,7 +107,7 @@ public class ProductPricingService {
                 response.priceTimeline().stream().map(p -> new ProductPriceDto.PricePoint(p.time(), p.price())).toList();
         List<ProductPriceDto.Explanation> explanations = response.explanations() == null ? List.of() :
                 response.explanations().stream().map(e -> new ProductPriceDto.Explanation(
-                        e.feature(), e.label(), e.value(), e.impact(), e.direction())).toList();
+                        e.feature(), e.label(), e.value(), e.displayValue(), e.impact(), e.direction())).toList();
         ProductPriceDto.AutoPricingResponse state = autoState(product);
         return new ProductPriceDto.Response(
                 response.currentPrice(), response.discountPct(), response.minutesLeft(), timeline,
