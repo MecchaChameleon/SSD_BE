@@ -21,7 +21,7 @@ public final class FrontendDto {
     public record PurchaseRequest(Long productId, Integer quantity) {}
     public record RejectRequest(String reasonCode, String reason) {}
     public record PurchaseResponse(Long id, Long productId, String productName, String businessName,
-            Long buyerId, String buyerNickname, Integer quantity, Integer unitPrice, Integer totalAmount,
+            Long buyerId, String buyerNickname, Integer quantity, Integer originalPrice, Integer unitPrice, Integer totalAmount,
             String status, String rejectReason,
             OffsetDateTime requestedAt, String paymentStatus) {}
     public record DashboardResponse(LocalDate date, PaymentCounts paymentCounts, long dailyRevenue,

@@ -106,6 +106,6 @@ class FrontendApiServiceTest {
     private PurchaseResponse response(String status, String paymentStatus) {
         return new PurchaseResponse(
                 PURCHASE_ID, 20L, "상품", "매장", USER_ID, "구매자",
-                1, 10_000, 10_000, status, null, OffsetDateTime.now(), paymentStatus);
+                1, 20_000, 10_000, 10_000, status, null, OffsetDateTime.now(), paymentStatus);
     }
 }
