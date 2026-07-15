@@ -22,8 +22,13 @@ public class FakeAiPricingClient implements AiPricingClient {
             0.82,
             "test-model",
             "테스트 설명",
-            "SHAP_PERMUTATION",
-            List.of(new AiPriceResponse.Explanation("remaining_ratio", "잔여 수량", 0.5, "5개", -500.0, "DOWN")),
+            "POLICY_CONTRIBUTION",
+            List.of(
+                    new AiPriceResponse.Explanation("elapsed_ratio", "판매 경과 시간", 0.5, "판매 구간 50% 경과", -300.0, "DOWN"),
+                    new AiPriceResponse.Explanation("inventory_state", "잔여 수량 및 재고 변화량", 0.5, "잔여 5개 · 직전 대비 -1개", 500.0, "UP"),
+                    new AiPriceResponse.Explanation("weather", "날씨", 0.2, "현재 날씨", -100.0, "DOWN"),
+                    new AiPriceResponse.Explanation("demand_percentile", "지역 수요", 0.7, "애월읍 과거 3년 EBM", 400.0, "UP")
+            ),
             "현재 26.2°C · 강수 0.0mm · 바람 1.2m/s",
             new AiPriceResponse.Weather(26.2, 0.0, 1.2, 26.0, 0.0, 2.0,
                     "KMA_ULTRA_SHORT", "2026-07-16T18:00:00+09:00"),
