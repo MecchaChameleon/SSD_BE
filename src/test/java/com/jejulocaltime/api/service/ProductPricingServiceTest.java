@@ -20,6 +20,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
 class ProductPricingServiceTest {
@@ -63,6 +66,7 @@ class ProductPricingServiceTest {
         product.setTotalQuantity(10);
         product.setRemainingQuantity(5);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        org.mockito.Mockito.lenient().when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), eq(PRODUCT_ID))).thenReturn(0L);
     }
 
     @Test
@@ -89,6 +93,30 @@ class ProductPricingServiceTest {
 
         assertThat(aiPricingClient.getLastPriceRequest().remainingQty()).isEqualTo(7);
         assertThat(aiPricingClient.getLastPriceRequest().inventoryChange()).isEqualTo(-3);
+    }
+
+    @Test
+    void 판매량은_현재재고차감이_아닌_실제_유효결제수량으로_전달한다() {
+        product.setRemainingQuantity(18);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), eq(PRODUCT_ID))).thenReturn(4L);
+
+        productPricingService.getPriceRecommendation(USER_ID, PRODUCT_ID);
+
+        assertThat(aiPricingClient.getLastPriceRequest().remainingQty()).isEqualTo(18);
+        assertThat(aiPricingClient.getLastPriceRequest().totalQty()).isEqualTo(22);
+    }
+
+    @Test
+    void 자동가격이_켜져있으면_변경된_추천가를_조회즉시_판매가에_반영한다() {
+        product.setStatus(Product.Status.ACTIVE);
+        product.setAiAutoPricingEnabled(true);
+
+        productPricingService.getPriceRecommendation(USER_ID, PRODUCT_ID);
+
+        // 가짜 추천가 8,000원은 판매자 최저가 12,000원으로 제한된다.
+        assertThat(product.getCurrentPrice()).isEqualTo(12000);
+        assertThat(product.getAiLastObservedQuantity()).isEqualTo(5);
+        verify(productRepository).save(product);
     }
 
     @Test

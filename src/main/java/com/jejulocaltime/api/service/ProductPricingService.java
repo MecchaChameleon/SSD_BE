@@ -31,9 +31,17 @@ public class ProductPricingService {
     private final SellerProfileRepository sellerProfileRepository;
     private final JdbcTemplate jdbcTemplate;
 
+    @Transactional
     public ProductPriceDto.Response getPriceRecommendation(Long userId, Long productId) {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
-        return toResponse(product, requestRecommendation(product));
+        AiPriceResponse response = requestRecommendation(product);
+        // 자동 가격 상품은 추천가 변경을 조회한 즉시 실제 판매가에도 반영한다.
+        // 10분 스케줄러는 화면이 열려 있지 않을 때를 위한 보조 갱신으로 유지한다.
+        if (product.getStatus() == Product.Status.ACTIVE && product.isAiAutoPricingEnabled()) {
+            applyRecommendation(product, response);
+            productRepository.save(product);
+        }
+        return toResponse(product, response);
     }
 
     @Transactional
@@ -73,6 +81,15 @@ public class ProductPricingService {
     private AiPriceResponse requestRecommendation(Product product) {
         OffsetDateTime now = OffsetDateTime.now();
         int remainingQuantity = value(product.getRemainingQuantity(), 0);
+        Long soldQuantityValue = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(quantity), 0)
+                FROM reservation
+                WHERE product_id = ?
+                  AND payment_status = 'PAID'
+                  AND status IN ('REQUESTED', 'COMPLETED')
+                """, Long.class, product.getId());
+        int soldQuantity = soldQuantityValue == null ? 0 : Math.toIntExact(soldQuantityValue);
+        int pricingTotalQuantity = remainingQuantity + soldQuantity;
         int inventoryChange = product.getAiLastObservedQuantity() == null
                 ? 0
                 : remainingQuantity - product.getAiLastObservedQuantity();
@@ -85,7 +102,7 @@ public class ProductPricingService {
         AiPriceRequest request = new AiPriceRequest(
                 product.getId(), product.getSellerProfileId(), enumName(product.getBusinessType()),
                 enumName(product.getCategory()), product.getOriginalPrice(), product.getMinimumPrice(),
-                product.getCurrentPrice(), value(product.getTotalQuantity(), 0), remainingQuantity, inventoryChange,
+                product.getCurrentPrice(), pricingTotalQuantity, remainingQuantity, inventoryChange,
                 stringValue(product.getAvailableStartAt()), stringValue(product.getReservationCloseAt()), now.toString(),
                 address, decimal(latitude), decimal(longitude),
                 enumName(product.getFootTrafficLevel())
