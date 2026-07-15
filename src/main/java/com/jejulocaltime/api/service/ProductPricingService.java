@@ -1,6 +1,7 @@
 package com.jejulocaltime.api.service;
 
 import com.jejulocaltime.api.domain.Product;
+import com.jejulocaltime.api.domain.SellerProfile;
 import com.jejulocaltime.api.dto.AiPriceRequest;
 import com.jejulocaltime.api.dto.AiPriceResponse;
 import com.jejulocaltime.api.dto.AiStrategyRequest;
@@ -8,6 +9,7 @@ import com.jejulocaltime.api.dto.AiStrategyResponse;
 import com.jejulocaltime.api.dto.ProductPriceDto;
 import com.jejulocaltime.api.dto.ProductStrategyDto;
 import com.jejulocaltime.api.repository.ProductRepository;
+import com.jejulocaltime.api.repository.SellerProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ public class ProductPricingService {
     private final ProductAccessGuard accessGuard;
     private final AiPricingClient aiPricingClient;
     private final ProductRepository productRepository;
+    private final SellerProfileRepository sellerProfileRepository;
     private final JdbcTemplate jdbcTemplate;
 
     public ProductPriceDto.Response getPriceRecommendation(Long userId, Long productId) {
@@ -73,12 +76,18 @@ public class ProductPricingService {
         int inventoryChange = product.getAiLastObservedQuantity() == null
                 ? 0
                 : remainingQuantity - product.getAiLastObservedQuantity();
+        SellerProfile profile = sellerProfileRepository.findById(product.getSellerProfileId()).orElse(null);
+        String address = locationAddress(product.getAddress(), profile == null ? null : profile.getAddress());
+        java.math.BigDecimal latitude = product.getLatitude() != null || profile == null
+                ? product.getLatitude() : profile.getLatitude();
+        java.math.BigDecimal longitude = product.getLongitude() != null || profile == null
+                ? product.getLongitude() : profile.getLongitude();
         AiPriceRequest request = new AiPriceRequest(
                 product.getId(), product.getSellerProfileId(), enumName(product.getBusinessType()),
                 enumName(product.getCategory()), product.getOriginalPrice(), product.getMinimumPrice(),
                 product.getCurrentPrice(), value(product.getTotalQuantity(), 0), remainingQuantity, inventoryChange,
                 stringValue(product.getAvailableStartAt()), stringValue(product.getReservationCloseAt()), now.toString(),
-                product.getAddress(), decimal(product.getLatitude()), decimal(product.getLongitude()),
+                address, decimal(latitude), decimal(longitude),
                 enumName(product.getFootTrafficLevel())
         );
         return aiPricingClient.getPriceRecommendation(request);
@@ -138,6 +147,11 @@ public class ProductPricingService {
 
     private static int value(Integer value, int fallback) { return value == null ? fallback : value; }
     private static Double decimal(java.math.BigDecimal value) { return value == null ? null : value.doubleValue(); }
+    private static String locationAddress(String productAddress, String profileAddress) {
+        if (productAddress == null || productAddress.isBlank()) return profileAddress;
+        if (profileAddress == null || profileAddress.isBlank() || productAddress.contains(profileAddress)) return productAddress;
+        return productAddress + " " + profileAddress;
+    }
     private static String stringValue(Object value) { return value == null ? null : value.toString(); }
     private static String enumName(Enum<?> value) { return value == null ? null : value.name(); }
 }

@@ -45,12 +45,14 @@ class ProductPricingServiceTest {
     void setUp() {
         ProductAccessGuard accessGuard = new ProductAccessGuard(sellerProfileRepository, productRepository);
         aiPricingClient = new FakeAiPricingClient();
-        productPricingService = new ProductPricingService(accessGuard, aiPricingClient, productRepository, jdbcTemplate);
+        productPricingService = new ProductPricingService(accessGuard, aiPricingClient, productRepository, sellerProfileRepository, jdbcTemplate);
 
         SellerProfile profile = new SellerProfile();
         profile.setId(SELLER_PROFILE_ID);
         profile.setUserId(USER_ID);
+        profile.setAddress("제주특별자치도 제주시 애월읍 애월로 1");
         when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(profile));
+        org.mockito.Mockito.lenient().when(sellerProfileRepository.findById(SELLER_PROFILE_ID)).thenReturn(Optional.of(profile));
 
         product = new Product();
         product.setId(PRODUCT_ID);
@@ -87,6 +89,15 @@ class ProductPricingServiceTest {
 
         assertThat(aiPricingClient.getLastPriceRequest().remainingQty()).isEqualTo(7);
         assertThat(aiPricingClient.getLastPriceRequest().inventoryChange()).isEqualTo(-3);
+    }
+
+    @Test
+    void 상품_주소에_읍면동이_없으면_판매자_매장_주소를_지역수요에_함께_전달한다() {
+        product.setAddress("애월 해안 매장");
+
+        productPricingService.getPriceRecommendation(USER_ID, PRODUCT_ID);
+
+        assertThat(aiPricingClient.getLastPriceRequest().address()).contains("애월읍");
     }
 
     @Test
