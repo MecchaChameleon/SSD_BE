@@ -8,7 +8,7 @@ public final class FrontendDto {
     private FrontendDto() {}
 
     public record PageResponse<T>(List<T> content, int number, int size, long totalElements, int totalPages, boolean last) {}
-    public record ProductResponse(Long id, Long sellerProfileId, String name, String businessName,
+    public record ProductResponse(Long id, Long sellerProfileId, String name, String description, String businessName,
             String businessType, String category, String type, Integer totalQty, Integer qty,
             Integer price, Integer minPrice, Integer currentPrice, Double discountRate,
             OffsetDateTime openTime, OffsetDateTime deadline, String address, Double lat, Double lng,

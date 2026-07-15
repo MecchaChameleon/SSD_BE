@@ -57,7 +57,8 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
-    private String description;
+    @Column(nullable = false, length = 50)
+    private String description = "";
 
     // 판매자 상품등록 화면 설계(업종 -> 유형 2단계 드롭다운)에서 "업종"에 해당.
     // category(유형)와의 궁합은 BusinessType.allows(Category)로 서버에서 검증한다.

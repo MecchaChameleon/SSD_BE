@@ -48,6 +48,7 @@ public class ProductService {
         Product product = new Product();
         product.setSellerProfileId(profile.getId());
         product.setName(request.name());
+        product.setDescription(request.description().trim());
         product.setBusinessType(request.businessType());
         product.setCategory(request.category());
         product.setResourceType(Product.ResourceType.fromCategory(request.category()));
@@ -76,6 +77,7 @@ public class ProductService {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
 
         if (request.name() != null) product.setName(request.name());
+        if (request.description() != null) product.setDescription(request.description().trim());
         if (request.businessType() != null) product.setBusinessType(request.businessType());
         if (request.category() != null) {
             product.setCategory(request.category());

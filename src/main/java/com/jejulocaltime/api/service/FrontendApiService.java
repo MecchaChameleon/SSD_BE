@@ -42,7 +42,7 @@ public class FrontendApiService {
         return java.util.Arrays.stream((Object[])value.getArray()).map(String::valueOf).toList();
     }
     private final RowMapper<ProductResponse> productMapper=(rs,n)->new ProductResponse(
-            rs.getLong("id"),rs.getLong("seller_profile_id"),rs.getString("name"),rs.getString("business_name"),
+            rs.getLong("id"),rs.getLong("seller_profile_id"),rs.getString("name"),rs.getString("description"),rs.getString("business_name"),
             rs.getString("business_type"),rs.getString("category"),rs.getString("environment_type"),
             rs.getInt("total_quantity"),rs.getInt("remaining_quantity"),rs.getInt("original_price"),
             rs.getInt("minimum_price"),rs.getInt("current_price"),

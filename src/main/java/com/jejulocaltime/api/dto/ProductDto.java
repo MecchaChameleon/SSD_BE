@@ -4,6 +4,8 @@ import com.jejulocaltime.api.common.util.NumberConversions;
 import com.jejulocaltime.api.domain.Product;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -15,6 +17,7 @@ public class ProductDto {
     // [POST] 상품/자원 등록
     @Schema(name="ProductCreateRequest") public record CreateRequest(
             @NotNull String name,
+            @NotBlank @Size(max = 50) String description,
             @NotNull Product.BusinessType businessType,
             @NotNull Product.Category category,
             Product.EnvironmentType type,
@@ -28,11 +31,16 @@ public class ProductDto {
             String address,
             Double lat,
             Double lng
-    ) {}
+    ) {
+        public CreateRequest(String name, Product.BusinessType businessType, Product.Category category, Product.EnvironmentType type, Integer qty, Integer price, Integer minPrice, OffsetDateTime openTime, OffsetDateTime deadline, Product.FootTrafficLevel foot, String address, Double lat, Double lng) {
+            this(name, "테스트 상품 설명", businessType, category, type, qty, price, minPrice, openTime, deadline, foot, address, lat, lng);
+        }
+    }
 
     // [PUT] 상품/자원 수정 (전부 선택적 입력)
     @Schema(name="ProductUpdateRequest") public record UpdateRequest(
             String name,
+            @Size(max = 50) String description,
             Product.BusinessType businessType,
             Product.Category category,
             Product.EnvironmentType type,
@@ -46,7 +54,11 @@ public class ProductDto {
             Double lat,
             Double lng,
             Product.Status status
-    ) {}
+    ) {
+        public UpdateRequest(String name, Product.BusinessType businessType, Product.Category category, Product.EnvironmentType type, Integer qty, Integer price, Integer minPrice, OffsetDateTime openTime, OffsetDateTime deadline, Product.FootTrafficLevel foot, String address, Double lat, Double lng, Product.Status status) {
+            this(name, null, businessType, category, type, qty, price, minPrice, openTime, deadline, foot, address, lat, lng, status);
+        }
+    }
 
     // [PATCH] 판매상태 변경
     public record StatusUpdateRequest(
@@ -58,6 +70,7 @@ public class ProductDto {
             Long id,
             Long sellerProfileId,
             String name,
+            String description,
             Product.BusinessType businessType,
             Product.Category category,
             Product.EnvironmentType type,
@@ -83,6 +96,7 @@ public class ProductDto {
                     entity.getId(),
                     entity.getSellerProfileId(),
                     entity.getName(),
+                    entity.getDescription(),
                     entity.getBusinessType(),
                     entity.getCategory(),
                     entity.getEnvironmentType(),
