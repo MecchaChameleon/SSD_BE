@@ -109,10 +109,17 @@ public class ProductPricingService {
                 response.explanations().stream().map(e -> new ProductPriceDto.Explanation(
                         e.feature(), e.label(), e.value(), e.displayValue(), e.impact(), e.direction())).toList();
         ProductPriceDto.AutoPricingResponse state = autoState(product);
+        ProductPriceDto.Weather weather = response.weather() == null ? null : new ProductPriceDto.Weather(
+                response.weather().currentTemperature(), response.weather().currentPrecipitation(),
+                response.weather().currentWindSpeed(), response.weather().forecastTemperature(),
+                response.weather().forecastPrecipitation(), response.weather().forecastWindSpeed(),
+                response.weather().source(), response.weather().observedAt()
+        );
         return new ProductPriceDto.Response(
                 response.currentPrice(), response.discountPct(), response.minutesLeft(), timeline,
                 response.confidence(), response.modelVersion(), response.reason(), response.explanationMethod(),
-                explanations, response.weatherSummary(), state.enabled(), state.lastUpdatedAt(), state.nextUpdateAt()
+                explanations, response.weatherSummary(), weather,
+                state.enabled(), state.lastUpdatedAt(), state.nextUpdateAt()
         );
     }
 

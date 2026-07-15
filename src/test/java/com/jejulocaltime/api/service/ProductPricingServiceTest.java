@@ -72,6 +72,8 @@ class ProductPricingServiceTest {
         assertThat(response.minutesLeft()).isEqualTo(FakeAiPricingClient.DEFAULT_PRICE_RESPONSE.minutesLeft());
         assertThat(response.priceTimeline()).hasSize(2);
         assertThat(response.priceTimeline().get(0).time()).isEqualTo("18:00");
+        assertThat(response.weather().source()).isEqualTo("KMA_ULTRA_SHORT");
+        assertThat(response.weather().currentTemperature()).isEqualTo(26.2);
     }
 
     @Test

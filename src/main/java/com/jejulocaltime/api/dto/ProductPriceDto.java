@@ -19,6 +19,7 @@ public class ProductPriceDto {
             String explanationMethod,
             List<Explanation> explanations,
             String weatherSummary,
+            Weather weather,
             boolean autoPricingEnabled,
             String lastUpdatedAt,
             String nextUpdateAt
@@ -36,6 +37,17 @@ public class ProductPriceDto {
             String displayValue,
             Double impact,
             String direction
+    ) {}
+
+    public record Weather(
+            Double currentTemperature,
+            Double currentPrecipitation,
+            Double currentWindSpeed,
+            Double forecastTemperature,
+            Double forecastPrecipitation,
+            Double forecastWindSpeed,
+            String source,
+            String observedAt
     ) {}
 
     public record AutoPricingRequest(boolean enabled) {}

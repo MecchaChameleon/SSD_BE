@@ -17,8 +17,19 @@ public record AiPriceResponse(
         String reason,
         String explanationMethod,
         List<Explanation> explanations,
-        String weatherSummary
+        String weatherSummary,
+        Weather weather
 ) {
     public record PricePoint(String time, Integer price) {}
     public record Explanation(String feature, String label, Double value, String displayValue, Double impact, String direction) {}
+    public record Weather(
+            Double currentTemperature,
+            Double currentPrecipitation,
+            Double currentWindSpeed,
+            Double forecastTemperature,
+            Double forecastPrecipitation,
+            Double forecastWindSpeed,
+            String source,
+            String observedAt
+    ) {}
 }
