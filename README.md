@@ -87,3 +87,23 @@ git push origin main
 - 기능명세서(SEL-01~06, BUY-01~06, AI-01~04)에 맞춘 Entity/Repository/Controller 구현
 - `application.yml`의 `ddl-auto: update`는 개발 단계용입니다. 운영 전환 시 Flyway/Liquibase로
   마이그레이션 관리로 바꾸는 것을 권장합니다.
+
+
+
+PowerShell 1
+cd C:\Users\user\Desktop\pj\SSD_AI
+$env:AI_SERVICE_API_KEY="Render와-동일한-키"
+.\.python\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 9000
+PowerShell 2
+cloudflared tunnel --url http://localhost:9000
+
+중요한 점은 Quick Tunnel을 다시 실행하면 다음 주소가 바뀔 수 있다는 것입니다.
+
+기존:
+https://old-address.trycloudflare.com
+
+재실행:
+https://new-address.trycloudflare.com
+
+주소가 바뀌면 Render의 AI_SERVICE_BASE_URL도 새 주소로 다시 변경하고 재배포해야 합니다.
+
