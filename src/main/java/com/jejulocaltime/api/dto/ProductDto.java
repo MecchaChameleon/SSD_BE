@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public class ProductDto {
 
@@ -71,11 +72,13 @@ public class ProductDto {
             String address,
             Double lat,
             Double lng,
+            List<String> imageUrls,
             Product.Status status,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        public static Response from(Product entity) {
+        public static Response from(Product entity) { return from(entity, List.of()); }
+        public static Response from(Product entity, List<String> imageUrls) {
             return new Response(
                     entity.getId(),
                     entity.getSellerProfileId(),
@@ -94,6 +97,7 @@ public class ProductDto {
                     entity.getAddress(),
                     NumberConversions.toDouble(entity.getLatitude()),
                     NumberConversions.toDouble(entity.getLongitude()),
+                    imageUrls,
                     entity.getStatus(),
                     entity.getCreatedAt(),
                     entity.getUpdatedAt()

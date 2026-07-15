@@ -9,6 +9,7 @@ import com.jejulocaltime.api.dto.ProductDto;
 import com.jejulocaltime.api.repository.ProductRepository;
 import com.jejulocaltime.api.repository.PaymentOrderRepository;
 import com.jejulocaltime.api.repository.SellerProfileRepository;
+import com.jejulocaltime.api.repository.ProductImageRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,12 +44,15 @@ class ProductServiceTest {
     @Mock
     private SellerProfileRepository sellerProfileRepository;
 
+    @Mock
+    private ProductImageRepository productImageRepository;
+
     private ProductService productService;
 
     @BeforeEach
     void setUp() {
         ProductAccessGuard accessGuard = new ProductAccessGuard(sellerProfileRepository, productRepository);
-        productService = new ProductService(productRepository, paymentOrderRepository, accessGuard);
+        productService = new ProductService(productRepository, paymentOrderRepository, accessGuard, productImageRepository);
     }
 
     @Test

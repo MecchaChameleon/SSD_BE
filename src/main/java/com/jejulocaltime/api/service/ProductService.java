@@ -9,6 +9,7 @@ import com.jejulocaltime.api.domain.SellerProfile;
 import com.jejulocaltime.api.dto.ProductDto;
 import com.jejulocaltime.api.repository.ProductRepository;
 import com.jejulocaltime.api.repository.PaymentOrderRepository;
+import com.jejulocaltime.api.repository.ProductImageRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,11 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final PaymentOrderRepository paymentOrderRepository;
     private final ProductAccessGuard accessGuard;
+    private final ProductImageRepository productImageRepository;
+
+    private ProductDto.Response response(Product product) {
+        return ProductDto.Response.from(product, productImageRepository.findByProductIdOrderBySortOrderAsc(product.getId()).stream().map(image -> image.getImageUrl()).toList());
+    }
 
     // 1. 상품/자원 등록
     @Transactional
@@ -61,7 +67,7 @@ public class ProductService {
         product.setStatus(Product.Status.ACTIVE);
 
         Product saved = productRepository.save(product);
-        return ProductDto.Response.from(saved);
+        return response(saved);
     }
 
     // 2. 상품/자원 수정 (부분 필드, 전부 nullable)
@@ -116,7 +122,7 @@ public class ProductService {
             product.setStatus(request.status());
         }
 
-        return ProductDto.Response.from(product);
+        return response(product);
     }
 
     private void requireCompatible(Product.BusinessType businessType, Product.Category category) {
@@ -153,13 +159,13 @@ public class ProductService {
                 ? productRepository.findBySellerProfileIdAndStatus(profile.getId(), status, pageable)
                 : productRepository.findBySellerProfileId(profile.getId(), pageable);
 
-        return page.map(ProductDto.Response::from);
+        return page.map(this::response);
     }
 
     // 6. 내 상품/자원 단건 조회
     public ProductDto.Response getMyProduct(Long userId, Long productId) {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
-        return ProductDto.Response.from(product);
+        return response(product);
     }
 
     // 7. 상품/자원 삭제
@@ -181,7 +187,7 @@ public class ProductService {
     public ProductDto.Response updateStatus(Long userId, Long productId, Product.Status status) {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
         product.setStatus(status);
-        return ProductDto.Response.from(product);
+        return response(product);
     }
 
     // 10. 결제 시 잔여 수량(재고) 차감
