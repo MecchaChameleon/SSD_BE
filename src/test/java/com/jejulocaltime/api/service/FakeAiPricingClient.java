@@ -33,6 +33,7 @@ public class FakeAiPricingClient implements AiPricingClient {
     private AiPriceResponse priceResponse = DEFAULT_PRICE_RESPONSE;
     private AiStrategyResponse strategyResponse = DEFAULT_STRATEGY_RESPONSE;
     private RuntimeException failure;
+    private AiPriceRequest lastPriceRequest;
 
     public void setPriceResponse(AiPriceResponse priceResponse) {
         this.priceResponse = priceResponse;
@@ -46,8 +47,13 @@ public class FakeAiPricingClient implements AiPricingClient {
         this.failure = failure;
     }
 
+    public AiPriceRequest getLastPriceRequest() {
+        return lastPriceRequest;
+    }
+
     @Override
     public AiPriceResponse getPriceRecommendation(AiPriceRequest request) {
+        lastPriceRequest = request;
         if (failure != null) {
             throw failure;
         }

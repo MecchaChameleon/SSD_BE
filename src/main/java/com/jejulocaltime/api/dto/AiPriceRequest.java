@@ -15,6 +15,7 @@ public record AiPriceRequest(
         Integer currentPrice,
         Integer totalQty,
         Integer remainingQty,
+        Integer inventoryChange,
         String availableStartAt,
         String deadline,
         String currentTime,

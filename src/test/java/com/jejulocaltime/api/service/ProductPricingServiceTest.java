@@ -39,6 +39,7 @@ class ProductPricingServiceTest {
 
     private FakeAiPricingClient aiPricingClient;
     private ProductPricingService productPricingService;
+    private Product product;
 
     @BeforeEach
     void setUp() {
@@ -51,7 +52,7 @@ class ProductPricingServiceTest {
         profile.setUserId(USER_ID);
         when(sellerProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.of(profile));
 
-        Product product = new Product();
+        product = new Product();
         product.setId(PRODUCT_ID);
         product.setSellerProfileId(SELLER_PROFILE_ID);
         product.setOriginalPrice(20000);
@@ -71,6 +72,17 @@ class ProductPricingServiceTest {
         assertThat(response.minutesLeft()).isEqualTo(FakeAiPricingClient.DEFAULT_PRICE_RESPONSE.minutesLeft());
         assertThat(response.priceTimeline()).hasSize(2);
         assertThat(response.priceTimeline().get(0).time()).isEqualTo("18:00");
+    }
+
+    @Test
+    void AI_요청에는_절대재고가_아닌_직전관측대비_변화량을_전달한다() {
+        product.setRemainingQuantity(7);
+        product.setAiLastObservedQuantity(10);
+
+        productPricingService.getPriceRecommendation(USER_ID, PRODUCT_ID);
+
+        assertThat(aiPricingClient.getLastPriceRequest().remainingQty()).isEqualTo(7);
+        assertThat(aiPricingClient.getLastPriceRequest().inventoryChange()).isEqualTo(-3);
     }
 
     @Test

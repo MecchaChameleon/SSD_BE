@@ -69,10 +69,14 @@ public class ProductPricingService {
 
     private AiPriceResponse requestRecommendation(Product product) {
         OffsetDateTime now = OffsetDateTime.now();
+        int remainingQuantity = value(product.getRemainingQuantity(), 0);
+        int inventoryChange = product.getAiLastObservedQuantity() == null
+                ? 0
+                : remainingQuantity - product.getAiLastObservedQuantity();
         AiPriceRequest request = new AiPriceRequest(
                 product.getId(), product.getSellerProfileId(), enumName(product.getBusinessType()),
                 enumName(product.getCategory()), product.getOriginalPrice(), product.getMinimumPrice(),
-                product.getCurrentPrice(), value(product.getTotalQuantity(), 0), value(product.getRemainingQuantity(), 0),
+                product.getCurrentPrice(), value(product.getTotalQuantity(), 0), remainingQuantity, inventoryChange,
                 stringValue(product.getAvailableStartAt()), stringValue(product.getReservationCloseAt()), now.toString(),
                 product.getAddress(), decimal(product.getLatitude()), decimal(product.getLongitude()),
                 enumName(product.getFootTrafficLevel())
@@ -88,6 +92,7 @@ public class ProductPricingService {
         product.setCurrentPrice(recommended);
         product.setAiLastPricedAt(OffsetDateTime.now());
         product.setAiModelVersion(response.modelVersion());
+        product.setAiLastObservedQuantity(value(product.getRemainingQuantity(), 0));
         if (previous == null || previous != recommended) {
             jdbcTemplate.update("""
                     INSERT INTO product_price_history

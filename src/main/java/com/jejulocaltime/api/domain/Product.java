@@ -102,6 +102,9 @@ public class Product {
     @Column(name = "ai_model_version", length = 100)
     private String aiModelVersion;
 
+    @Column(name = "ai_last_observed_quantity")
+    private Integer aiLastObservedQuantity;
+
     @Column(name = "available_start_at")
     private OffsetDateTime availableStartAt;
 
