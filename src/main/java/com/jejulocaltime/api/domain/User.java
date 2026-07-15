@@ -48,7 +48,11 @@ public class User {
     public void updateProfile(String email, String nickname, String profileImageUrl) {
         this.email = email;
         this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
+        // 카카오 재로그인 시 사용자가 업로드해 DB/S3에 저장한 프로필 이미지를 덮어쓰지 않는다.
+        // 기존 이미지가 없는 계정에 한해서만 카카오 기본 이미지를 최초 보완한다.
+        if (this.profileImageUrl == null || this.profileImageUrl.isBlank()) {
+            this.profileImageUrl = profileImageUrl;
+        }
     }
 
     public Long getId() {
