@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +34,9 @@ class ProductPricingServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private JdbcTemplate jdbcTemplate;
+
     private FakeAiPricingClient aiPricingClient;
     private ProductPricingService productPricingService;
 
@@ -40,7 +44,7 @@ class ProductPricingServiceTest {
     void setUp() {
         ProductAccessGuard accessGuard = new ProductAccessGuard(sellerProfileRepository, productRepository);
         aiPricingClient = new FakeAiPricingClient();
-        productPricingService = new ProductPricingService(accessGuard, aiPricingClient);
+        productPricingService = new ProductPricingService(accessGuard, aiPricingClient, productRepository, jdbcTemplate);
 
         SellerProfile profile = new SellerProfile();
         profile.setId(SELLER_PROFILE_ID);
@@ -52,6 +56,9 @@ class ProductPricingServiceTest {
         product.setSellerProfileId(SELLER_PROFILE_ID);
         product.setOriginalPrice(20000);
         product.setMinimumPrice(12000);
+        product.setCurrentPrice(20000);
+        product.setTotalQuantity(10);
+        product.setRemainingQuantity(5);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
     }
 

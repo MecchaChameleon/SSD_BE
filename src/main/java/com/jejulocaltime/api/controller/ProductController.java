@@ -82,6 +82,19 @@ public class ProductController {
         return ApiResponseTemplate.success(response);
     }
 
+    @GetMapping("/{productId}/auto-pricing")
+    public ResponseEntity<ApiResponseTemplate<ProductPriceDto.AutoPricingResponse>> getAutoPricing(
+            @AuthenticationPrincipal Long userId, @PathVariable Long productId) {
+        return ApiResponseTemplate.success(productPricingService.getAutoPricing(userId, productId));
+    }
+
+    @PutMapping("/{productId}/auto-pricing")
+    public ResponseEntity<ApiResponseTemplate<ProductPriceDto.AutoPricingResponse>> setAutoPricing(
+            @AuthenticationPrincipal Long userId, @PathVariable Long productId,
+            @RequestBody ProductPriceDto.AutoPricingRequest request) {
+        return ApiResponseTemplate.success(productPricingService.setAutoPricing(userId, productId, request.enabled()));
+    }
+
     // 4. 판매 전략 제안 조회
     @Operation(summary = "판매 전략 제안 조회", description = "AI 서버가 생성한 판매 전략 문구를 그대로 전달한다.")
     @GetMapping("/{productId}/strategy")

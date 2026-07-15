@@ -11,7 +11,14 @@ public record AiPriceResponse(
         Integer currentPrice,
         Double discountPct,
         Integer minutesLeft,
-        List<PricePoint> priceTimeline
+        List<PricePoint> priceTimeline,
+        Double confidence,
+        String modelVersion,
+        String reason,
+        String explanationMethod,
+        List<Explanation> explanations,
+        String weatherSummary
 ) {
     public record PricePoint(String time, Integer price) {}
+    public record Explanation(String feature, String label, Double value, Double impact, String direction) {}
 }

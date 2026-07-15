@@ -22,10 +22,14 @@ public class AiPricingRestClient implements AiPricingClient {
 
     private final RestClient aiApiClient;
 
-    public AiPricingRestClient(@Value("${ai.service.base-url}") String baseUrl) {
-        this.aiApiClient = RestClient.builder()
-                .baseUrl(baseUrl)
-                .build();
+    public AiPricingRestClient(
+            @Value("${ai.service.base-url}") String baseUrl,
+            @Value("${ai.service.api-key:}") String apiKey) {
+        RestClient.Builder builder = RestClient.builder().baseUrl(baseUrl);
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.defaultHeader("X-AI-Service-Key", apiKey);
+        }
+        this.aiApiClient = builder.build();
     }
 
     @Override

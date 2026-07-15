@@ -93,6 +93,15 @@ public class Product {
     @Column(name = "current_price", nullable = false)
     private Integer currentPrice;
 
+    @Column(name = "ai_auto_pricing_enabled", nullable = false)
+    private boolean aiAutoPricingEnabled;
+
+    @Column(name = "ai_last_priced_at")
+    private OffsetDateTime aiLastPricedAt;
+
+    @Column(name = "ai_model_version", length = 100)
+    private String aiModelVersion;
+
     @Column(name = "available_start_at")
     private OffsetDateTime availableStartAt;
 

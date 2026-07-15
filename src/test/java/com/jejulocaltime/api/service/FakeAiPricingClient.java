@@ -18,7 +18,13 @@ public class FakeAiPricingClient implements AiPricingClient {
             8000,
             0.2,
             30,
-            List.of(new AiPriceResponse.PricePoint("18:00", 10000), new AiPriceResponse.PricePoint("18:30", 8000))
+            List.of(new AiPriceResponse.PricePoint("18:00", 10000), new AiPriceResponse.PricePoint("18:30", 8000)),
+            0.82,
+            "test-model",
+            "테스트 설명",
+            "SHAP_PERMUTATION",
+            List.of(new AiPriceResponse.Explanation("remaining_ratio", "잔여 수량", 0.5, -500.0, "DOWN")),
+            "맑음"
     );
 
     public static final AiStrategyResponse DEFAULT_STRATEGY_RESPONSE =

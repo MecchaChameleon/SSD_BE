@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -26,4 +27,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findBySellerProfileIdAndStatus(Long sellerProfileId, Product.Status status, Pageable pageable);
 
     Optional<Product> findByIdAndSellerProfileId(Long id, Long sellerProfileId);
+
+    List<Product> findByStatusAndAiAutoPricingEnabledTrue(Product.Status status);
 }

@@ -12,11 +12,32 @@ public class ProductPriceDto {
             Integer currentPrice,
             Double discountPct,
             Integer minutesLeft,
-            List<PricePoint> priceTimeline
+            List<PricePoint> priceTimeline,
+            Double confidence,
+            String modelVersion,
+            String reason,
+            String explanationMethod,
+            List<Explanation> explanations,
+            String weatherSummary,
+            boolean autoPricingEnabled,
+            String lastUpdatedAt,
+            String nextUpdateAt
     ) {}
 
     public record PricePoint(
             String time,
             Integer price
     ) {}
+
+    public record Explanation(
+            String feature,
+            String label,
+            Double value,
+            Double impact,
+            String direction
+    ) {}
+
+    public record AutoPricingRequest(boolean enabled) {}
+
+    public record AutoPricingResponse(boolean enabled, String lastUpdatedAt, String nextUpdateAt) {}
 }

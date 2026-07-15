@@ -35,6 +35,11 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
+      # 로컬 AI를 HTTPS 터널로 공개한 주소(예: https://xxxx.trycloudflare.com)
+      - key: AI_SERVICE_BASE_URL
+        sync: false
+      - key: AI_SERVICE_API_KEY
+        sync: false
       # 아래는 값을 Blueprint가 관리하지 않고(sync: false) Render 대시보드에서 직접 입력한다.
       # 상품 이미지 업로드(S3FileStorage) 사용에 필요.
       - key: FILE_STORAGE_TYPE

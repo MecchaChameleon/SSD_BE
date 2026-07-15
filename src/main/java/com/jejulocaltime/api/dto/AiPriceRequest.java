@@ -7,9 +7,19 @@ package com.jejulocaltime.api.dto;
  */
 public record AiPriceRequest(
         Long productId,
+        Long sellerProfileId,
+        String businessType,
+        String category,
         Integer originalPrice,
         Integer minimumPrice,
+        Integer currentPrice,
+        Integer totalQty,
         Integer remainingQty,
+        String availableStartAt,
         String deadline,
+        String currentTime,
+        String address,
+        Double latitude,
+        Double longitude,
         String footTrafficLevel
 ) {}
