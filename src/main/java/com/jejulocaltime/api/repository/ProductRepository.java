@@ -29,4 +29,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByIdAndSellerProfileId(Long id, Long sellerProfileId);
 
     List<Product> findByStatusAndAiAutoPricingEnabledTrue(Product.Status status);
+
+    List<Product> findByStatus(Product.Status status);
 }

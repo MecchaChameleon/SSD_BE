@@ -12,6 +12,7 @@ import com.jejulocaltime.api.repository.PaymentOrderRepository;
 import com.jejulocaltime.api.repository.ProductImageRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class ProductService {
 
@@ -32,6 +34,7 @@ public class ProductService {
     private final PaymentOrderRepository paymentOrderRepository;
     private final ProductAccessGuard accessGuard;
     private final ProductImageRepository productImageRepository;
+    private final ProductPricingService productPricingService;
 
     private ProductDto.Response response(Product product) {
         return ProductDto.Response.from(product, productImageRepository.findByProductIdOrderBySortOrderAsc(product.getId()).stream().map(image -> image.getImageUrl()).toList());
@@ -68,6 +71,7 @@ public class ProductService {
         product.setStatus(Product.Status.ACTIVE);
 
         Product saved = productRepository.save(product);
+        recalculatePrice(saved.getId());
         return response(saved);
     }
 
@@ -124,6 +128,7 @@ public class ProductService {
             product.setStatus(request.status());
         }
 
+        recalculatePrice(product.getId());
         return response(product);
     }
 
@@ -189,6 +194,7 @@ public class ProductService {
     public ProductDto.Response updateStatus(Long userId, Long productId, Product.Status status) {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
         product.setStatus(status);
+        recalculatePrice(productId);
         return response(product);
     }
 
@@ -204,5 +210,15 @@ public class ProductService {
 
         // 잔여 수량 1 차감
         product.setRemainingQuantity(product.getRemainingQuantity() - 1);
+        recalculatePrice(productId);
+    }
+
+    private void recalculatePrice(Long productId) {
+        if (productId == null) return;
+        try {
+            productPricingService.recalculate(productId);
+        } catch (RuntimeException exception) {
+            log.warn("AI price recalculation failed after product change for {}: {}", productId, exception.getMessage());
+        }
     }
 }

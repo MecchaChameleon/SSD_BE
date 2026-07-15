@@ -47,12 +47,15 @@ class ProductServiceTest {
     @Mock
     private ProductImageRepository productImageRepository;
 
+    @Mock
+    private ProductPricingService productPricingService;
+
     private ProductService productService;
 
     @BeforeEach
     void setUp() {
         ProductAccessGuard accessGuard = new ProductAccessGuard(sellerProfileRepository, productRepository);
-        productService = new ProductService(productRepository, paymentOrderRepository, accessGuard, productImageRepository);
+        productService = new ProductService(productRepository, paymentOrderRepository, accessGuard, productImageRepository, productPricingService);
     }
 
     @Test

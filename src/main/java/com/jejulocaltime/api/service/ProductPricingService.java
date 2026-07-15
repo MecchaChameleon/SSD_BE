@@ -15,8 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -30,17 +32,14 @@ public class ProductPricingService {
     private final ProductRepository productRepository;
     private final SellerProfileRepository sellerProfileRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final ConcurrentHashMap<Long, CachedRecommendation> recommendationCache = new ConcurrentHashMap<>();
 
     @Transactional
     public ProductPriceDto.Response getPriceRecommendation(Long userId, Long productId) {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
-        AiPriceResponse response = requestRecommendation(product);
+        AiPriceResponse response = cachedOrCalculate(product);
         // 자동 가격 상품은 추천가 변경을 조회한 즉시 실제 판매가에도 반영한다.
         // 10분 스케줄러는 화면이 열려 있지 않을 때를 위한 보조 갱신으로 유지한다.
-        if (product.getStatus() == Product.Status.ACTIVE && product.isAiAutoPricingEnabled()) {
-            applyRecommendation(product, response);
-            productRepository.save(product);
-        }
         return toResponse(product, response);
     }
 
@@ -49,7 +48,7 @@ public class ProductPricingService {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
         product.setAiAutoPricingEnabled(enabled);
         if (enabled) {
-            applyRecommendation(product, requestRecommendation(product));
+            calculate(product, true);
         }
         productRepository.save(product);
         return autoState(product);
@@ -60,13 +59,17 @@ public class ProductPricingService {
     }
 
     @Transactional
-    public void recalculateAndApply(Long productId) {
+    public void recalculate(Long productId) {
         Product product = productRepository.findById(productId).orElse(null);
-        if (product == null || product.getStatus() != Product.Status.ACTIVE || !product.isAiAutoPricingEnabled()) {
+        if (product == null || product.getStatus() != Product.Status.ACTIVE) {
             return;
         }
-        applyRecommendation(product, requestRecommendation(product));
-        productRepository.save(product);
+        calculate(product, product.isAiAutoPricingEnabled());
+    }
+
+    @Transactional
+    public void recalculateAndApply(Long productId) {
+        recalculate(productId);
     }
 
     public ProductStrategyDto.Response getStrategy(Long userId, Long productId) {
@@ -108,6 +111,25 @@ public class ProductPricingService {
                 enumName(product.getFootTrafficLevel())
         );
         return aiPricingClient.getPriceRecommendation(request);
+    }
+
+    private AiPriceResponse cachedOrCalculate(Product product) {
+        CachedRecommendation cached = recommendationCache.get(product.getId());
+        if (cached != null
+                && Duration.between(cached.calculatedAt(), OffsetDateTime.now()).toMinutes() < UPDATE_INTERVAL_MINUTES) {
+            return cached.response();
+        }
+        return calculate(product, product.isAiAutoPricingEnabled());
+    }
+
+    private AiPriceResponse calculate(Product product, boolean applyPrice) {
+        AiPriceResponse response = requestRecommendation(product);
+        recommendationCache.put(product.getId(), new CachedRecommendation(response, OffsetDateTime.now()));
+        if (applyPrice && product.getStatus() == Product.Status.ACTIVE) {
+            applyRecommendation(product, response);
+            productRepository.save(product);
+        }
+        return response;
     }
 
     private void applyRecommendation(Product product, AiPriceResponse response) {
@@ -171,4 +193,6 @@ public class ProductPricingService {
     }
     private static String stringValue(Object value) { return value == null ? null : value.toString(); }
     private static String enumName(Enum<?> value) { return value == null ? null : value.name(); }
+
+    private record CachedRecommendation(AiPriceResponse response, OffsetDateTime calculatedAt) {}
 }

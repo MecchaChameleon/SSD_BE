@@ -16,9 +16,9 @@ public class AiAutoPricingScheduler {
 
     @Scheduled(fixedDelayString = "${ai.pricing.interval-ms:600000}")
     public void updateActiveProducts() {
-        for (Product product : productRepository.findByStatusAndAiAutoPricingEnabledTrue(Product.Status.ACTIVE)) {
+        for (Product product : productRepository.findByStatus(Product.Status.ACTIVE)) {
             try {
-                productPricingService.recalculateAndApply(product.getId());
+                productPricingService.recalculate(product.getId());
             } catch (RuntimeException exception) {
                 log.warn("AI auto pricing failed for product {}: {}", product.getId(), exception.getMessage());
             }
