@@ -5,6 +5,7 @@ import com.jejulocaltime.api.dto.LoginResponse;
 import com.jejulocaltime.api.dto.MeResponse;
 import com.jejulocaltime.api.repository.UserRepository;
 import com.jejulocaltime.api.service.KakaoAuthService;
+import com.jejulocaltime.api.service.AccountWithdrawalService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,10 +27,13 @@ public class AuthController {
 
     private final KakaoAuthService kakaoAuthService;
     private final UserRepository userRepository;
+    private final AccountWithdrawalService accountWithdrawalService;
 
-    public AuthController(KakaoAuthService kakaoAuthService, UserRepository userRepository) {
+    public AuthController(KakaoAuthService kakaoAuthService, UserRepository userRepository,
+                          AccountWithdrawalService accountWithdrawalService) {
         this.kakaoAuthService = kakaoAuthService;
         this.userRepository = userRepository;
+        this.accountWithdrawalService = accountWithdrawalService;
     }
 
     @PostMapping("/kakao")
@@ -51,9 +55,6 @@ public class AuthController {
     @Operation(summary = "회원 탈퇴", description = "현재 회원과 연관된 판매자, 상품, 결제 내역 데이터를 함께 삭제합니다. 성공 시 응답 본문 없이 204를 반환합니다.")
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.NO_CONTENT)
     public void withdraw(@AuthenticationPrincipal Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
-        }
-        userRepository.deleteById(userId);
+        accountWithdrawalService.withdraw(userId);
     }
 }
