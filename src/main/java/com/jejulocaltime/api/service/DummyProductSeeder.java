@@ -68,6 +68,7 @@ public class DummyProductSeeder {
             product.setAvailableStartAt(now);
             product.setReservationCloseAt(reservationCloseAt);
             product.setStatus(Product.Status.ACTIVE);
+            product.setAiAutoPricingEnabled(true);
             productRepository.save(product);
 
             ensureProductImage(product.getId(), spec.imageKeywords());
@@ -91,7 +92,7 @@ public class DummyProductSeeder {
         product.setOriginalPrice(spec.originalPrice());
         product.setMinimumPrice(spec.minimumPrice());
         product.setCurrentPrice(spec.originalPrice());
-        product.setAiAutoPricingEnabled(false);
+        product.setAiAutoPricingEnabled(true);
         product.setAvailableStartAt(availableStartAt);
         product.setReservationCloseAt(reservationCloseAt);
         product.setAddress(spec.address());
