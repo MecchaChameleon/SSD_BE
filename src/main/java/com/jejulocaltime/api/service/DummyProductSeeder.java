@@ -19,7 +19,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -38,6 +40,9 @@ public class DummyProductSeeder {
 
     private static final Long DUMMY_KAKAO_ID = -1L;
     private static final String DUMMY_BUSINESS_NUMBER = "000-00-00000";
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+    private static final LocalTime SALES_START_TIME = LocalTime.of(0, 5);
+    private static final LocalTime SALES_CLOSE_TIME = LocalTime.of(23, 55);
 
     private final UserRepository userRepository;
     private final SellerApplicationRepository sellerApplicationRepository;
@@ -53,21 +58,22 @@ public class DummyProductSeeder {
         refresh();
     }
 
-    @Scheduled(cron = "${dummy-data.cron:0 10 0 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "${dummy-data.cron:0 5 0 * * *}", zone = "Asia/Seoul")
     public void refresh() {
         SellerProfile sellerProfile = ensureDummySellerProfile();
-        OffsetDateTime now = OffsetDateTime.now();
-        OffsetDateTime reservationCloseAt = now.plusHours(26);
+        var salesDate = OffsetDateTime.now(SEOUL).toLocalDate();
+        OffsetDateTime availableStartAt = salesDate.atTime(SALES_START_TIME).atZone(SEOUL).toOffsetDateTime();
+        OffsetDateTime reservationCloseAt = salesDate.atTime(SALES_CLOSE_TIME).atZone(SEOUL).toOffsetDateTime();
 
         for (DummySpec spec : SPECS) {
             Product product = productRepository
                     .findBySellerProfileIdAndName(sellerProfile.getId(), spec.name())
-                    .orElseGet(() -> createProduct(sellerProfile, spec, now, reservationCloseAt));
+                    .orElseGet(() -> createProduct(sellerProfile, spec, availableStartAt, reservationCloseAt));
 
             product.setTotalQuantity(spec.totalQuantity());
             product.setRemainingQuantity(spec.totalQuantity());
             product.setCurrentPrice(spec.originalPrice());
-            product.setAvailableStartAt(now);
+            product.setAvailableStartAt(availableStartAt);
             product.setReservationCloseAt(reservationCloseAt);
             product.setStatus(Product.Status.ACTIVE);
             product.setAiAutoPricingEnabled(true);
