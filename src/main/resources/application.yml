@@ -61,3 +61,10 @@ spring.servlet.multipart:
   max-file-size: 10MB
   max-request-size: 30MB
 
+# 데모/QA용 더미 상품 20개를 항상 노출 상태로 유지하는 스케줄러(DummyProductSeeder).
+# 서버 시작 시 1회 + 매일 cron 시각에 상품 만료 시간을 오늘 기준으로 되돌린다.
+# 끄려면 환경변수 DUMMY_DATA_ENABLED=false 로 설정.
+dummy-data:
+  enabled: ${DUMMY_DATA_ENABLED:true}
+  cron: ${DUMMY_DATA_CRON:0 10 0 * * *}
+
