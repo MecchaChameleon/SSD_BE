@@ -68,3 +68,8 @@ dummy-data:
   enabled: ${DUMMY_DATA_ENABLED:true}
   cron: ${DUMMY_DATA_CRON:0 10 0 * * *}
 
+# 더미 상품 사진(src/main/resources/static/dummy-images/*)에 접근할 때 붙일 절대 URL.
+# 커스텀 도메인을 쓰거나 Render 서비스명이 바뀌면 APP_PUBLIC_BASE_URL로 덮어쓸 것.
+app:
+  public-base-url: ${APP_PUBLIC_BASE_URL:https://jeju-localtime-api.onrender.com}
+

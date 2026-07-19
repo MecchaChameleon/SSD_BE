@@ -32,6 +32,7 @@ public class SecurityConfig {
             "/error",
             "/actuator/health",
             "/api/auth/kakao",
+            "/dummy-images/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**"
