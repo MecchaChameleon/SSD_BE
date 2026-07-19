@@ -63,7 +63,7 @@ DB 정보를 Web Service의 Environment 탭에 직접 입력해도 됩니다.
 
 ## 4. 이후 배포 흐름 (CI/CD)
 
-`render.yaml`에 `autoDeploy: true`로 설정되어 있어서, 이후에는
+`render.yaml`에 `autoDeployTrigger: commit`으로 설정되어 있어서, 이후에는
 
 ```bash
 git add .
@@ -88,22 +88,20 @@ git push origin main
 - `application.yml`의 `ddl-auto: update`는 개발 단계용입니다. 운영 전환 시 Flyway/Liquibase로
   마이그레이션 관리로 바꾸는 것을 권장합니다.
 
+## AI Render 서비스 연결
 
+무료 실행 시간 750시간을 BE와 AI가 공유하지 않도록 AI는 별도 Hobby 워크스페이스에
+배포합니다. AI 배포를 먼저 완료한 다음 이 BE 서비스의 Environment 탭에 아래 값을 넣습니다.
 
-PowerShell 1
-cd C:\Users\user\Desktop\pj\SSD_AI
-$env:AI_SERVICE_API_KEY="Render와-동일한-키"
-.\.python\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 9000
-PowerShell 2
-cloudflared tunnel --url http://localhost:9000
+```dotenv
+AI_SERVICE_BASE_URL=https://jeju-localtime-ai.onrender.com
+AI_SERVICE_API_KEY=<AI 서비스에 입력한 것과 같은 긴 임의 문자열>
+```
 
-중요한 점은 Quick Tunnel을 다시 실행하면 다음 주소가 바뀔 수 있다는 것입니다.
+`AI_SERVICE_BASE_URL` 끝에는 `/`를 붙이지 않습니다. 서로 다른 워크스페이스는 Render
+사설망을 공유하지 않으므로 AI의 공개 `onrender.com` HTTPS 주소를 사용합니다.
 
-기존:
-https://old-address.trycloudflare.com
-
-재실행:
-https://new-address.trycloudflare.com
-
-주소가 바뀌면 Render의 AI_SERVICE_BASE_URL도 새 주소로 다시 변경하고 재배포해야 합니다.
+현재 자동가격 스케줄러는 활성 상품을 10분마다 갱신합니다. 따라서 AI 무료 서비스가 15분
+유휴 슬립에 들어가지 않고 월 약 720~744시간 실행되며, AI 워크스페이스에는 계속 실행되는
+다른 무료 Web Service를 추가하지 않는 것이 안전합니다.
 

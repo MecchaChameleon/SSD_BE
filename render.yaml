@@ -11,7 +11,7 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: DB_HOST
         fromDatabase:
@@ -35,9 +35,10 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
-      # 로컬 AI를 HTTPS 터널로 공개한 주소(예: https://xxxx.trycloudflare.com)
+      # 별도 Hobby 워크스페이스에 배포한 AI의 공개 주소
       - key: AI_SERVICE_BASE_URL
-        sync: false
+        value: https://jeju-localtime-ai.onrender.com
+      # AI 워크스페이스의 AI_SERVICE_API_KEY와 반드시 같은 값
       - key: AI_SERVICE_API_KEY
         sync: false
       # 아래는 값을 Blueprint가 관리하지 않고(sync: false) Render 대시보드에서 직접 입력한다.

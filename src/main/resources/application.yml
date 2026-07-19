@@ -32,8 +32,9 @@ jwt:
   secret: ${JWT_SECRET:local-dev-only-secret-key-change-me-32bytes-min}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
-# AI 추천 할인가/판매 전략 서버(FastAPI, AI 파트가 별도 배포). 아직 실제 주소/경로 확정 전이라
-# 로컬 기본값은 임시로 넣어뒀다. TODO: 배포 주소 확정되면 AI_SERVICE_BASE_URL 환경변수로 주입.
+# AI 추천 할인가/판매 전략 서버(FastAPI)는 별도 Render Hobby 워크스페이스에 배포한다.
+# Render에서는 AI_SERVICE_BASE_URL에 AI의 공개 onrender.com 주소를 넣고,
+# 로컬 개발에서는 환경변수를 생략해 http://localhost:9000을 사용한다.
 ai:
   service:
     base-url: ${AI_SERVICE_BASE_URL:http://localhost:9000}
