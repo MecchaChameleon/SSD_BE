@@ -63,7 +63,7 @@ public class FrontendApiService {
         """; }
 
     public PageResponse<ProductResponse> products(Long userId,String query,String businessType,String category,String sort,int page,int size) {
-        var sql=new StringBuilder(productSelect()+" WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now() ");
+        var sql=new StringBuilder(productSelect()+" WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND (p.available_start_at IS NULL OR p.available_start_at<=now()) AND p.reservation_close_at>now() ");
         var args=new ArrayList<Object>(); args.add(userId==null?-1L:userId);
         if(query!=null&&!query.isBlank()){sql.append("AND (lower(p.name) LIKE lower(?) OR lower(sp.business_name) LIKE lower(?)) ");args.add("%"+query+"%");args.add("%"+query+"%");}
         if(businessType!=null){sql.append("AND p.business_type=? ");args.add(businessType);}
@@ -71,7 +71,7 @@ public class FrontendApiService {
         String order=switch(sort==null?"":sort){case "DEADLINE_ASC"->"p.reservation_close_at ASC";case "DISCOUNT_DESC"->"(p.original_price-p.current_price) DESC";case "PRICE_ASC"->"p.current_price ASC";default->"p.created_at DESC";};
         sql.append("ORDER BY ").append(order).append(" LIMIT ? OFFSET ?");args.add(size);args.add(page*size);
         var content=jdbc.query(sql.toString(),productMapper,args.toArray());
-        var countSql=new StringBuilder("SELECT count(*) FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now() ");
+        var countSql=new StringBuilder("SELECT count(*) FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND (p.available_start_at IS NULL OR p.available_start_at<=now()) AND p.reservation_close_at>now() ");
         var countArgs=new ArrayList<Object>();
         if(query!=null&&!query.isBlank()){countSql.append("AND (lower(p.name) LIKE lower(?) OR lower(sp.business_name) LIKE lower(?)) ");countArgs.add("%"+query+"%");countArgs.add("%"+query+"%");}
         if(businessType!=null){countSql.append("AND p.business_type=? ");countArgs.add(businessType);}
@@ -94,7 +94,9 @@ public class FrontendApiService {
             SELECT p.id,p.name,sp.business_name,p.category,p.original_price,p.current_price,
                    p.latitude,p.longitude,p.address,p.reservation_close_at
             FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
-            WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now()
+            WHERE p.status='ACTIVE' AND p.remaining_quantity>0
+              AND (p.available_start_at IS NULL OR p.available_start_at<=now())
+              AND p.reservation_close_at>now()
               AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
             """);
         var args=new ArrayList<Object>();
@@ -110,7 +112,7 @@ public class FrontendApiService {
     public PurchaseResponse purchase(Long userId, PurchaseRequest request){
         Long productId=request.productId();Integer quantity=request.quantity();
         if(quantity==null||quantity<1)throw new ResponseStatusException(BAD_REQUEST,"수량은 1개 이상이어야 합니다.");
-        var p=jdbc.queryForMap("SELECT id,current_price,remaining_quantity,status,(reservation_close_at>now()) AS sale_open FROM product WHERE id=? FOR UPDATE",productId);
+        var p=jdbc.queryForMap("SELECT id,current_price,remaining_quantity,status,((available_start_at IS NULL OR available_start_at<=now()) AND reservation_close_at>now()) AS sale_open FROM product WHERE id=? FOR UPDATE",productId);
         if("ACTIVE".equals(p.get("status"))&&!Boolean.TRUE.equals(p.get("sale_open"))){
             throw new ResponseStatusException(CONFLICT,"판매가 종료된 상품입니다.");
         }

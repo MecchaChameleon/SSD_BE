@@ -19,6 +19,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -41,8 +43,8 @@ public class DummyProductSeeder {
     private static final Long DUMMY_KAKAO_ID = -1L;
     private static final String DUMMY_BUSINESS_NUMBER = "000-00-00000";
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
-    private static final LocalTime SALES_START_TIME = LocalTime.of(0, 5);
-    private static final LocalTime SALES_CLOSE_TIME = LocalTime.of(23, 55);
+    private static final LocalTime FIRST_SALES_START_TIME = LocalTime.of(1, 0);
+    private static final Duration SALES_DURATION = Duration.ofHours(23).plusMinutes(55);
 
     private final UserRepository userRepository;
     private final SellerApplicationRepository sellerApplicationRepository;
@@ -62,19 +64,19 @@ public class DummyProductSeeder {
     public void refresh() {
         SellerProfile sellerProfile = ensureDummySellerProfile();
         var salesDate = OffsetDateTime.now(SEOUL).toLocalDate();
-        OffsetDateTime availableStartAt = salesDate.atTime(SALES_START_TIME).atZone(SEOUL).toOffsetDateTime();
-        OffsetDateTime reservationCloseAt = salesDate.atTime(SALES_CLOSE_TIME).atZone(SEOUL).toOffsetDateTime();
 
-        for (DummySpec spec : SPECS) {
+        for (int index = 0; index < SPECS.size(); index++) {
+            DummySpec spec = SPECS.get(index);
+            SalesWindow window = salesWindow(salesDate, index);
             Product product = productRepository
                     .findBySellerProfileIdAndName(sellerProfile.getId(), spec.name())
-                    .orElseGet(() -> createProduct(sellerProfile, spec, availableStartAt, reservationCloseAt));
+                    .orElseGet(() -> createProduct(sellerProfile, spec, window.startAt(), window.closeAt()));
 
             product.setTotalQuantity(spec.totalQuantity());
             product.setRemainingQuantity(spec.totalQuantity());
             product.setCurrentPrice(spec.originalPrice());
-            product.setAvailableStartAt(availableStartAt);
-            product.setReservationCloseAt(reservationCloseAt);
+            product.setAvailableStartAt(window.startAt());
+            product.setReservationCloseAt(window.closeAt());
             product.setStatus(Product.Status.ACTIVE);
             product.setAiAutoPricingEnabled(true);
             productRepository.save(product);
@@ -82,7 +84,20 @@ public class DummyProductSeeder {
             ensureProductImage(product.getId(), spec.imageFileName());
         }
 
-        log.info("Dummy product refresh done: {} products active until {}", SPECS.size(), reservationCloseAt);
+        SalesWindow lastWindow = salesWindow(salesDate, SPECS.size() - 1);
+        log.info("Dummy product refresh done: {} products scheduled through {}",
+                SPECS.size(), lastWindow.closeAt());
+    }
+
+    static SalesWindow salesWindow(LocalDate salesDate, int index) {
+        if (index < 0 || index >= 20) {
+            throw new IllegalArgumentException("Dummy product index must be between 0 and 19");
+        }
+        OffsetDateTime startAt = salesDate
+                .atTime(FIRST_SALES_START_TIME.plusHours(index))
+                .atZone(SEOUL)
+                .toOffsetDateTime();
+        return new SalesWindow(startAt, startAt.plus(SALES_DURATION));
     }
 
     private Product createProduct(SellerProfile sellerProfile, DummySpec spec,
@@ -120,16 +135,12 @@ public class DummyProductSeeder {
         String imageUrl = publicBaseUrl + "/dummy-images/" + fileName;
 
         List<ProductImage> existingImages = productImageRepository.findByProductIdOrderBySortOrderAsc(productId);
-        if (existingImages.isEmpty()) {
-            productImageRepository.save(new ProductImage(productId, imageUrl, 0));
+        if (existingImages.size() == 1 && imageUrl.equals(existingImages.get(0).getImageUrl())) {
             return;
         }
 
-        ProductImage image = existingImages.get(0);
-        if (!imageUrl.equals(image.getImageUrl())) {
-            productImageRepository.delete(image);
-            productImageRepository.save(new ProductImage(productId, imageUrl, 0));
-        }
+        productImageRepository.deleteAll(existingImages);
+        productImageRepository.save(new ProductImage(productId, imageUrl, 0));
     }
 
     private SellerProfile ensureDummySellerProfile() {
@@ -181,6 +192,9 @@ public class DummyProductSeeder {
             String imageFileName) {
     }
 
+    record SalesWindow(OffsetDateTime startAt, OffsetDateTime closeAt) {
+    }
+
     private static final List<DummySpec> SPECS = List.of(
             new DummySpec("[데모] 제주 흑돼지 맛집 당일특가", "당일 마감 전 한정 수량 특가", Product.BusinessType.RESTAURANT,
                     Product.Category.SAME_DAY_INVENTORY, Product.EnvironmentType.INDOOR, 10, 25000, 15000,
@@ -210,7 +224,7 @@ public class DummyProductSeeder {
             new DummySpec("[데모] 서귀포 오션뷰 펜션 당일특가", "당일 예약 가능 오션뷰 객실", Product.BusinessType.LODGING,
                     Product.Category.SAME_DAY_ROOM, Product.EnvironmentType.INDOOR, 2, 90000, 55000,
                     Product.FootTrafficLevel.HIGH, "서귀포시 중문동", new BigDecimal("33.2460000"), new BigDecimal("126.4120000"),
-                    "ocean-view.jpg"),
+                    "ocean-view.webp"),
             new DummySpec("[데모] 협재 감성숙소 남은객실 할인", "남은 객실 마감 할인", Product.BusinessType.LODGING,
                     Product.Category.SAME_DAY_ROOM, Product.EnvironmentType.INDOOR, 4, 70000, 40000,
                     Product.FootTrafficLevel.LOW, "제주시 한림읍 협재리", new BigDecimal("33.3940000"), new BigDecimal("126.2400000"),
@@ -218,7 +232,7 @@ public class DummyProductSeeder {
             new DummySpec("[데모] 중문 리조트 스탠다드룸 마감특가", "당일 마감 스탠다드룸 특가", Product.BusinessType.LODGING,
                     Product.Category.SAME_DAY_ROOM, Product.EnvironmentType.INDOOR, 2, 120000, 70000,
                     Product.FootTrafficLevel.HIGH, "서귀포시 중문관광로", new BigDecimal("33.2500000"), new BigDecimal("126.4150000"),
-                    "resort.jpg"),
+                    "resort.webp"),
             new DummySpec("[데모] 한림 독채펜션 당일예약 할인", "당일 예약 시 즉시 할인", Product.BusinessType.LODGING,
                     Product.Category.SAME_DAY_ROOM, Product.EnvironmentType.INDOOR, 1, 85000, 50000,
                     Product.FootTrafficLevel.LOW, "제주시 한림읍", new BigDecimal("33.4110000"), new BigDecimal("126.2680000"),
@@ -256,7 +270,7 @@ public class DummyProductSeeder {
             new DummySpec("[데모] 스쿠터 렌탈 당일 마감할인", "당일 마감 임박 렌탈 할인", Product.BusinessType.RENTAL_MOBILITY,
                     Product.Category.TOUR_REMAINDER, Product.EnvironmentType.OUTDOOR, 8, 25000, 15000,
                     Product.FootTrafficLevel.LOW, "서귀포시 표선면", new BigDecimal("33.3270000"), new BigDecimal("126.8350000"),
-                    "scooter.jpg"),
+                    "scooter.png"),
             new DummySpec("[데모] 카약 체험 투어 잔여자리", "잔여 자리 한정 특가", Product.BusinessType.RENTAL_MOBILITY,
                     Product.Category.TOUR_REMAINDER, Product.EnvironmentType.OUTDOOR, 5, 38000, 24000,
                     Product.FootTrafficLevel.LOW, "서귀포시 성산읍", new BigDecimal("33.4600000"), new BigDecimal("126.9300000"),
