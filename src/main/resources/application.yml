@@ -79,4 +79,5 @@ kakao:
   client-secret: ${KAKAO_CLIENT_SECRET:}
   redirect-uri: ${KAKAO_REDIRECT_URI:${app.public-base-url}/api/auth/kakao/callback}
   app-login-redirect-uri: ${KAKAO_APP_LOGIN_REDIRECT_URI:jejulocaltime://oauth/kakao}
+  web-login-redirect-uri: ${KAKAO_WEB_LOGIN_REDIRECT_URI:http://localhost:8081/oauth/kakao}
 

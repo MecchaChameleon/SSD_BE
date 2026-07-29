@@ -41,6 +41,9 @@ services:
         value: https://jeju-localtime-api.onrender.com/api/auth/kakao/callback
       - key: KAKAO_APP_LOGIN_REDIRECT_URI
         value: jejulocaltime://oauth/kakao
+      # Set this to the deployed Vercel origin plus /oauth/kakao in the Render dashboard.
+      - key: KAKAO_WEB_LOGIN_REDIRECT_URI
+        sync: false
       - key: KAKAO_REST_API_KEY
         sync: false
       - key: KAKAO_CLIENT_SECRET

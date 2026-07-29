@@ -41,25 +41,32 @@ public class OAuthLoginTicketService {
     }
 
     @Transactional
-    public String issueState() {
+    public String issueState(String loginRedirectUri) {
         removeExpiredValues();
         String state = randomValue();
-        jdbcClient.sql("INSERT INTO oauth_login_state(state_hash, expires_at) VALUES (:hash, :expiresAt)")
+        jdbcClient.sql("""
+                        INSERT INTO oauth_login_state(state_hash, login_redirect_uri, expires_at)
+                        VALUES (:hash, :loginRedirectUri, :expiresAt)
+                        """)
                 .param("hash", hash(state))
+                .param("loginRedirectUri", loginRedirectUri)
                 .param("expiresAt", Timestamp.from(Instant.now().plus(STATE_TTL_MINUTES, ChronoUnit.MINUTES)))
                 .update();
         return state;
     }
 
     @Transactional
-    public void consumeState(String state) {
-        int deleted = jdbcClient.sql("""
+    public String consumeState(String state) {
+        try {
+            return jdbcClient.sql("""
                         DELETE FROM oauth_login_state
                         WHERE state_hash = :hash AND expires_at > now()
+                        RETURNING login_redirect_uri
                         """)
-                .param("hash", hash(state))
-                .update();
-        if (deleted != 1) {
+                    .param("hash", hash(state))
+                    .query(String.class)
+                    .single();
+        } catch (EmptyResultDataAccessException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "만료되었거나 유효하지 않은 로그인 요청입니다.");
         }
     }

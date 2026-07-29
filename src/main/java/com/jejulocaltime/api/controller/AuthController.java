@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 
@@ -34,6 +36,10 @@ import java.net.URI;
 @RequestMapping("/api/auth")
 public class AuthController {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+    private static final String APP_CLIENT = "app";
+    private static final String WEB_CLIENT = "web";
+
     private final KakaoAuthService kakaoAuthService;
     private final UserRepository userRepository;
     private final AccountWithdrawalService accountWithdrawalService;
@@ -41,13 +47,15 @@ public class AuthController {
     private final String kakaoRestApiKey;
     private final String kakaoRedirectUri;
     private final String appLoginRedirectUri;
+    private final String webLoginRedirectUri;
 
     public AuthController(KakaoAuthService kakaoAuthService, UserRepository userRepository,
                           AccountWithdrawalService accountWithdrawalService,
                           OAuthLoginTicketService loginTicketService,
                           @Value("${kakao.rest-api-key:}") String kakaoRestApiKey,
                           @Value("${kakao.redirect-uri}") String kakaoRedirectUri,
-                          @Value("${kakao.app-login-redirect-uri:jejulocaltime://oauth/kakao}") String appLoginRedirectUri) {
+                          @Value("${kakao.app-login-redirect-uri:jejulocaltime://oauth/kakao}") String appLoginRedirectUri,
+                          @Value("${kakao.web-login-redirect-uri:http://localhost:8081/oauth/kakao}") String webLoginRedirectUri) {
         this.kakaoAuthService = kakaoAuthService;
         this.userRepository = userRepository;
         this.accountWithdrawalService = accountWithdrawalService;
@@ -55,14 +63,21 @@ public class AuthController {
         this.kakaoRestApiKey = kakaoRestApiKey;
         this.kakaoRedirectUri = kakaoRedirectUri;
         this.appLoginRedirectUri = appLoginRedirectUri;
+        this.webLoginRedirectUri = webLoginRedirectUri;
     }
 
     @GetMapping("/kakao/start")
-    public ResponseEntity<Void> startKakaoLogin() {
+    public ResponseEntity<Void> startKakaoLogin(
+            @RequestParam(defaultValue = APP_CLIENT) String client) {
         if (kakaoRestApiKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "카카오 로그인이 설정되지 않았습니다.");
         }
-        String state = loginTicketService.issueState();
+        String loginRedirectUri = switch (client) {
+            case APP_CLIENT -> appLoginRedirectUri;
+            case WEB_CLIENT -> webLoginRedirectUri;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported OAuth client");
+        };
+        String state = loginTicketService.issueState(loginRedirectUri);
         URI location = UriComponentsBuilder.fromUriString("https://kauth.kakao.com/oauth/authorize")
                 .queryParam("client_id", kakaoRestApiKey)
                 .queryParam("redirect_uri", kakaoRedirectUri)
@@ -79,17 +94,31 @@ public class AuthController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String state,
             @RequestParam(required = false) String error) {
-        if (error != null || code == null || state == null) {
-            return redirectToApp("error", error == null ? "KAKAO_LOGIN_CANCELLED" : error);
+        if (state == null) {
+            log.warn("Kakao OAuth callback did not contain state");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing OAuth state");
+        }
+
+        final String loginRedirectUri;
+        try {
+            loginRedirectUri = loginTicketService.consumeState(state);
+        } catch (RuntimeException e) {
+            log.warn("Kakao OAuth state validation failed", e);
+            throw e;
+        }
+
+        if (error != null || code == null) {
+            return redirectToClient(loginRedirectUri, "error",
+                    error == null ? "KAKAO_LOGIN_CANCELLED" : error);
         }
         try {
-            loginTicketService.consumeState(state);
             KakaoAuthService.KakaoLoginResult result =
                     kakaoAuthService.loginWithAuthorizationCode(code, kakaoRedirectUri);
             String ticket = loginTicketService.issueTicket(result.user(), result.isNewUser());
-            return redirectToApp("ticket", ticket);
+            return redirectToClient(loginRedirectUri, "ticket", ticket);
         } catch (RuntimeException e) {
-            return redirectToApp("error", "KAKAO_LOGIN_FAILED");
+            log.error("Kakao OAuth login failed after callback", e);
+            return redirectToClient(loginRedirectUri, "error", "KAKAO_LOGIN_FAILED");
         }
     }
 
@@ -98,8 +127,8 @@ public class AuthController {
         return loginTicketService.exchange(request.ticket());
     }
 
-    private ResponseEntity<Void> redirectToApp(String name, String value) {
-        URI location = UriComponentsBuilder.fromUriString(appLoginRedirectUri)
+    private ResponseEntity<Void> redirectToClient(String loginRedirectUri, String name, String value) {
+        URI location = UriComponentsBuilder.fromUriString(loginRedirectUri)
                 .queryParam(name, value)
                 .build()
                 .encode()
