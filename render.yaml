@@ -35,6 +35,16 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
+      - key: APP_PUBLIC_BASE_URL
+        value: https://jeju-localtime-api.onrender.com
+      - key: KAKAO_REDIRECT_URI
+        value: https://jeju-localtime-api.onrender.com/api/auth/kakao/callback
+      - key: KAKAO_APP_LOGIN_REDIRECT_URI
+        value: jejulocaltime://oauth/kakao
+      - key: KAKAO_REST_API_KEY
+        sync: false
+      - key: KAKAO_CLIENT_SECRET
+        sync: false
       # 별도 Hobby 워크스페이스에 배포한 AI의 공개 주소
       - key: AI_SERVICE_BASE_URL
         value: https://jeju-localtime-ai.onrender.com

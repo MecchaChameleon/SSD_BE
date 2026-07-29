@@ -74,3 +74,9 @@ dummy-data:
 app:
   public-base-url: ${APP_PUBLIC_BASE_URL:https://jeju-localtime-api.onrender.com}
 
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY:}
+  client-secret: ${KAKAO_CLIENT_SECRET:}
+  redirect-uri: ${KAKAO_REDIRECT_URI:${app.public-base-url}/api/auth/kakao/callback}
+  app-login-redirect-uri: ${KAKAO_APP_LOGIN_REDIRECT_URI:jejulocaltime://oauth/kakao}
+
