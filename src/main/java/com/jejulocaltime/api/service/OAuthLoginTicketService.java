@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -45,7 +46,7 @@ public class OAuthLoginTicketService {
         String state = randomValue();
         jdbcClient.sql("INSERT INTO oauth_login_state(state_hash, expires_at) VALUES (:hash, :expiresAt)")
                 .param("hash", hash(state))
-                .param("expiresAt", Instant.now().plus(STATE_TTL_MINUTES, ChronoUnit.MINUTES))
+                .param("expiresAt", Timestamp.from(Instant.now().plus(STATE_TTL_MINUTES, ChronoUnit.MINUTES)))
                 .update();
         return state;
     }
@@ -73,7 +74,7 @@ public class OAuthLoginTicketService {
                 .param("hash", hash(ticket))
                 .param("userId", user.getId())
                 .param("isNewUser", isNewUser)
-                .param("expiresAt", Instant.now().plus(TICKET_TTL_MINUTES, ChronoUnit.MINUTES))
+                .param("expiresAt", Timestamp.from(Instant.now().plus(TICKET_TTL_MINUTES, ChronoUnit.MINUTES)))
                 .update();
         return ticket;
     }
