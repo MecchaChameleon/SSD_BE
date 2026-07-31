@@ -43,7 +43,7 @@ class AuthControllerTest {
     void webLoginStoresTheConfiguredWebCallbackInState() {
         when(loginTicketService.issueState(WEB_CALLBACK)).thenReturn("oauth-state");
 
-        ResponseEntity<Void> response = controller.startKakaoLogin("web");
+        ResponseEntity<Void> response = controller.startKakaoLogin("web", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
         assertThat(response.getHeaders().getLocation()).isNotNull();
@@ -51,6 +51,25 @@ class AuthControllerTest {
                 .contains("https://kauth.kakao.com/oauth/authorize")
                 .contains("state=oauth-state");
         verify(loginTicketService).issueState(WEB_CALLBACK);
+    }
+
+    @Test
+    void localWebLoginReturnsToTheCurrentLocalOrigin() {
+        String localCallback = "http://localhost:8081/oauth/kakao";
+        when(loginTicketService.issueState(localCallback)).thenReturn("local-state");
+
+        ResponseEntity<Void> response = controller.startKakaoLogin("web", localCallback);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+        verify(loginTicketService).issueState(localCallback);
+    }
+
+    @Test
+    void webLoginRejectsAnUntrustedReturnOrigin() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                controller.startKakaoLogin("web", "https://evil.example/oauth/kakao"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("Unsupported OAuth return URI");
     }
 
     @Test

@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.Objects;
 
 @Tag(name = "Auth", description = "카카오 로그인 인증 API")
 @RestController
@@ -68,13 +69,14 @@ public class AuthController {
 
     @GetMapping("/kakao/start")
     public ResponseEntity<Void> startKakaoLogin(
-            @RequestParam(defaultValue = APP_CLIENT) String client) {
+            @RequestParam(defaultValue = APP_CLIENT) String client,
+            @RequestParam(required = false) String returnUri) {
         if (kakaoRestApiKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "카카오 로그인이 설정되지 않았습니다.");
         }
         String loginRedirectUri = switch (client) {
             case APP_CLIENT -> appLoginRedirectUri;
-            case WEB_CLIENT -> webLoginRedirectUri;
+            case WEB_CLIENT -> resolveWebLoginRedirectUri(returnUri);
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported OAuth client");
         };
         String state = loginTicketService.issueState(loginRedirectUri);
@@ -87,6 +89,35 @@ public class AuthController {
                 .encode()
                 .toUri();
         return ResponseEntity.status(HttpStatus.FOUND).location(location).build();
+    }
+
+    private String resolveWebLoginRedirectUri(String requestedUri) {
+        if (requestedUri == null || requestedUri.isBlank()) return webLoginRedirectUri;
+        try {
+            URI requested = URI.create(requestedUri);
+            URI configured = URI.create(webLoginRedirectUri);
+            boolean http = "http".equalsIgnoreCase(requested.getScheme())
+                    || "https".equalsIgnoreCase(requested.getScheme());
+            boolean callbackPath = "/oauth/kakao".equals(requested.getPath());
+            boolean noCredentials = requested.getUserInfo() == null;
+            boolean local = "localhost".equalsIgnoreCase(requested.getHost())
+                    || "127.0.0.1".equals(requested.getHost());
+            boolean configuredOrigin = requested.getScheme().equalsIgnoreCase(configured.getScheme())
+                    && Objects.equals(requested.getHost(), configured.getHost())
+                    && effectivePort(requested) == effectivePort(configured);
+            if (http && callbackPath && noCredentials && requested.getQuery() == null
+                    && requested.getFragment() == null && (local || configuredOrigin)) {
+                return requested.toString();
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Invalid or untrusted return URIs are rejected below.
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported OAuth return URI");
+    }
+
+    private int effectivePort(URI uri) {
+        if (uri.getPort() >= 0) return uri.getPort();
+        return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
     }
 
     @GetMapping("/kakao/callback")

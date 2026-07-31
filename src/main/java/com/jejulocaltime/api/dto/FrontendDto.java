@@ -45,4 +45,10 @@ public final class FrontendDto {
     public record NotificationSettings(boolean commonEvent, boolean sellerPayment, boolean sellerAiPrice,
             boolean sellerSettlement, boolean buyerDeadline, boolean buyerPaymentResult) {}
     public record PushTokenRequest(String deviceToken, String platform) {}
+    public record AiRecommendationRequest(String query, Double latitude, Double longitude) {}
+    public record AiRecommendationReason(String code, String text) {}
+    public record AiRecommendedProduct(ProductResponse product, Integer score,
+            List<AiRecommendationReason> reasons) {}
+    public record AiRecommendationResponse(String summary, String weatherSummary,
+            List<AiRecommendedProduct> recommendations) {}
 }

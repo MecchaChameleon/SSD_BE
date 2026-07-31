@@ -42,6 +42,10 @@ ai:
   pricing:
     interval-ms: ${AI_PRICING_INTERVAL_MS:600000}
 
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  model: ${OPENAI_RECOMMENDATION_MODEL:gpt-5.6}
+
 # 국세청 사업자등록정보 진위확인 및 상태조회 (공공데이터포털)
 nts:
   base-url: ${NTS_BASE_URL:https://api.odcloud.kr/api/nts-businessman/v1}

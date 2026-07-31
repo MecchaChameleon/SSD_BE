@@ -19,6 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FrontendApiController {
     private final FrontendApiService service;
+    private final com.jejulocaltime.api.service.BuyerAiRecommendationService aiRecommendationService;
     private final UserRepository users;
 
     @GetMapping("/api/products")
@@ -41,6 +42,11 @@ public class FrontendApiController {
     @GetMapping("/api/buyer/wishlist") public ResponseEntity<ApiResponseTemplate<PageResponse<ProductResponse>>> wishlist(@AuthenticationPrincipal Long userId,@RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="10")int size){return ApiResponseTemplate.success(service.wishlist(userId,page,size));}
     @PostMapping("/api/buyer/wishlist/{productId}") public ResponseEntity<ApiResponseTemplate<Void>> addWish(@AuthenticationPrincipal Long userId,@PathVariable Long productId){service.addWish(userId,productId);return ApiResponseTemplate.success();}
     @DeleteMapping("/api/buyer/wishlist/{productId}") public ResponseEntity<ApiResponseTemplate<Void>> removeWish(@AuthenticationPrincipal Long userId,@PathVariable Long productId){service.removeWish(userId,productId);return ApiResponseTemplate.success();}
+    @PostMapping("/api/buyer/ai-recommendations")
+    public ResponseEntity<ApiResponseTemplate<AiRecommendationResponse>> aiRecommendations(
+            @AuthenticationPrincipal Long userId, @RequestBody AiRecommendationRequest body) {
+        return ApiResponseTemplate.success(aiRecommendationService.recommend(userId, body));
+    }
 
     @GetMapping("/api/seller/payments") public ResponseEntity<ApiResponseTemplate<PageResponse<PurchaseResponse>>> sellerPayments(@AuthenticationPrincipal Long userId,@RequestParam(required=false)String status,@RequestParam(required=false)@DateTimeFormat(iso=DateTimeFormat.ISO.DATE)LocalDate date,@RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="10")int size){return ApiResponseTemplate.success(service.sellerPayments(userId,status,date,page,size));}
     @PatchMapping("/api/seller/payments/{id}/accept") public ResponseEntity<ApiResponseTemplate<PurchaseResponse>> acceptPayment(@AuthenticationPrincipal Long userId,@PathVariable Long id){return ApiResponseTemplate.success(service.sellerPaymentAction(userId,id,true,null));}
