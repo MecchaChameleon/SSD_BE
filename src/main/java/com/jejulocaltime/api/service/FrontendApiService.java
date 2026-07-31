@@ -53,26 +53,39 @@ public class FrontendApiService {
             time(rs,"available_start_at"),time(rs,"reservation_close_at"),rs.getString("address"),
             decimal(rs,"latitude"),decimal(rs,"longitude"),
             time(rs,"reservation_close_at").isBefore(OffsetDateTime.now().plusHours(1)),null,strings(rs,"image_urls"),rs.getString("status"),
-            time(rs,"created_at"),time(rs,"updated_at"),rs.getBoolean("wishlisted"));
+            time(rs,"created_at"),time(rs,"updated_at"),rs.getBoolean("wishlisted"),decimal(rs,"distance_km"));
 
-    private String productSelect() { return """
+    // 위경도 사이의 대권거리(km)를 구면법칙(law of cosines)으로 계산한다. 부동소수점 오차로 acos 인자가
+    // [-1,1] 범위를 살짝 벗어나 NaN이 되는 걸 막기 위해 LEAST/GREATEST로 clamp한다.
+    private static final String DISTANCE_KM_EXPR =
+            "6371 * acos(LEAST(1, GREATEST(-1, cos(radians(?)) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians(?)) + sin(radians(?)) * sin(radians(p.latitude)))))";
+
+    private String productSelect() { return productSelect("NULL"); }
+
+    private String productSelect(String distanceExpr) { return """
         SELECT p.*, sp.business_name,
           ARRAY(SELECT pi.image_url FROM product_image pi WHERE pi.product_id=p.id ORDER BY pi.sort_order,pi.id) AS image_urls,
-          EXISTS(SELECT 1 FROM wishlist w WHERE w.product_id=p.id AND w.user_id=?) AS wishlisted
+          EXISTS(SELECT 1 FROM wishlist w WHERE w.product_id=p.id AND w.user_id=?) AS wishlisted,
+          """ + distanceExpr + """
+           AS distance_km
         FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
         """; }
 
-    public PageResponse<ProductResponse> products(Long userId,String query,String businessType,String category,String sort,int page,int size) {
-        var sql=new StringBuilder(productSelect()+" WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now() ");
+    public PageResponse<ProductResponse> products(Long userId,String query,String businessType,String category,String sort,Double lat,Double lng,int page,int size) {
+        boolean distanceSort="DISTANCE_ASC".equals(sort);
+        if(distanceSort&&(lat==null||lng==null))throw new ResponseStatusException(BAD_REQUEST,"거리순 정렬은 lat, lng 파라미터가 필요합니다.");
+        var sql=new StringBuilder(productSelect(distanceSort?DISTANCE_KM_EXPR:"NULL")+" WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now() ");
         var args=new ArrayList<Object>(); args.add(userId==null?-1L:userId);
+        if(distanceSort){args.add(lat);args.add(lng);args.add(lat);sql.append("AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL ");}
         if(query!=null&&!query.isBlank()){sql.append("AND (lower(p.name) LIKE lower(?) OR lower(sp.business_name) LIKE lower(?)) ");args.add("%"+query+"%");args.add("%"+query+"%");}
         if(businessType!=null){sql.append("AND p.business_type=? ");args.add(businessType);}
         if(category!=null){sql.append("AND p.category=? ");args.add(category);}
-        String order=switch(sort==null?"":sort){case "DEADLINE_ASC"->"p.reservation_close_at ASC";case "DISCOUNT_DESC"->"(p.original_price-p.current_price) DESC";case "PRICE_ASC"->"p.current_price ASC";default->"p.created_at DESC";};
+        String order=switch(sort==null?"":sort){case "DEADLINE_ASC"->"p.reservation_close_at ASC";case "DISCOUNT_DESC"->"(p.original_price-p.current_price) DESC";case "PRICE_ASC"->"p.current_price ASC";case "DISTANCE_ASC"->"distance_km ASC";default->"p.created_at DESC";};
         sql.append("ORDER BY ").append(order).append(" LIMIT ? OFFSET ?");args.add(size);args.add(page*size);
         var content=jdbc.query(sql.toString(),productMapper,args.toArray());
         var countSql=new StringBuilder("SELECT count(*) FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now() ");
         var countArgs=new ArrayList<Object>();
+        if(distanceSort)countSql.append("AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL ");
         if(query!=null&&!query.isBlank()){countSql.append("AND (lower(p.name) LIKE lower(?) OR lower(sp.business_name) LIKE lower(?)) ");countArgs.add("%"+query+"%");countArgs.add("%"+query+"%");}
         if(businessType!=null){countSql.append("AND p.business_type=? ");countArgs.add(businessType);}
         if(category!=null){countSql.append("AND p.category=? ");countArgs.add(category);}

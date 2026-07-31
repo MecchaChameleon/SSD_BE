@@ -26,7 +26,8 @@ public class FrontendApiController {
     public ResponseEntity<ApiResponseTemplate<PageResponse<ProductResponse>>> products(@AuthenticationPrincipal Long userId,
             @RequestParam(required=false)String query,@RequestParam(required=false)String businessType,
             @RequestParam(required=false)String category,@RequestParam(required=false)String sort,
-            @RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="10")int size){return ApiResponseTemplate.success(service.products(userId,query,businessType,category,sort,page,Math.min(size,50)));}
+            @RequestParam(required=false)Double lat,@RequestParam(required=false)Double lng,
+            @RequestParam(defaultValue="0")int page,@RequestParam(defaultValue="10")int size){return ApiResponseTemplate.success(service.products(userId,query,businessType,category,sort,lat,lng,page,Math.min(size,50)));}
     @GetMapping("/api/products/{id}") public ResponseEntity<ApiResponseTemplate<ProductResponse>> product(@AuthenticationPrincipal Long userId,@PathVariable Long id){return ApiResponseTemplate.success(service.product(userId,id));}
     // 지도에 판매중 상품 핀을 뿌리기 위한 API. 뷰포트 좌표(swLat/swLng/neLat/neLng)를 모두 보내면 그 범위 안의 상품만 반환한다.
     @GetMapping("/api/products/map") public ResponseEntity<ApiResponseTemplate<List<MapPinResponse>>> productsMap(

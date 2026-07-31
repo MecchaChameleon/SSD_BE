@@ -13,7 +13,7 @@ public final class FrontendDto {
             Integer price, Integer minPrice, Integer currentPrice, Double discountRate,
             OffsetDateTime openTime, OffsetDateTime deadline, String address, Double lat, Double lng,
             Boolean urgent, String aiInsight, List<String> imageUrls, String status,
-            OffsetDateTime createdAt, OffsetDateTime updatedAt, Boolean wishlisted) {}
+            OffsetDateTime createdAt, OffsetDateTime updatedAt, Boolean wishlisted, Double distanceKm) {}
     // 지도 핀 표시용 경량 응답. 위경도가 등록된 판매중 상품만 대상으로 한다.
     public record MapPinResponse(Long id, String name, String businessName, String category,
             Integer price, Integer currentPrice, Double discountRate,
