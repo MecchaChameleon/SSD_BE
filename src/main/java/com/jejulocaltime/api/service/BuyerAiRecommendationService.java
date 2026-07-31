@@ -68,9 +68,22 @@ public class BuyerAiRecommendationService {
                     reasons.stream().filter(r -> !r.text().isBlank()).limit(4).toList()));
         }
         return new AiRecommendationResponse(
-                result.path("summary").asText("조건에 맞는 마감 상품을 추천했어요."),
+                humanizeSummary(
+                        result.path("summary").asText("조건에 맞는 마감 상품을 추천했어요."),
+                        candidates),
                 weather == null ? null : String.valueOf(weather.get("summary")),
                 recommendations);
+    }
+
+    private String humanizeSummary(String summary, List<Candidate> candidates) {
+        String value = summary;
+        for (Candidate candidate : candidates) {
+            // productId는 응답 검증용 내부 식별자이므로 사용자 문구에는 상품명으로 표시한다.
+            value = value.replaceAll(
+                    "(?<![\\d:])" + candidate.id() + "(?=(?:은|는|이|가|번|,|·|\\s))",
+                    java.util.regex.Matcher.quoteReplacement("'" + candidate.name() + "'"));
+        }
+        return value;
     }
 
     private List<Candidate> loadCandidates(Double lat, Double lng) {
@@ -166,6 +179,9 @@ public class BuyerAiRecommendationService {
                     인원×단가가 예산을 넘는 상품은 제외하고, 시간/위치/실내외/재고/마감/할인을 함께 평가한다.
                     조건을 완전히 만족하는 상품이 부족하면 결과 수를 줄이고 summary에 이유를 쓴다.
                     이유는 한국어로 짧고 구체적으로 작성하며 입력에 없는 운전 거리나 운영 조건을 만들지 않는다.
+                    productId는 시스템의 내부 식별자다. summary와 reasons에는 productId, 내부 코드,
+                    JSON 필드명을 절대 노출하지 말고 반드시 사람이 읽을 수 있는 상품명과 자연어만 사용한다.
+                    summary는 전체 추천 기준을 자연스럽게 설명하고 상품을 언급할 때는 상품명을 사용한다.
                     """);
             body.put("input", objectMapper.writeValueAsString(input));
             body.put("text", Map.of("format", Map.of(
