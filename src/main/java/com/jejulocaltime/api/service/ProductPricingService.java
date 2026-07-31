@@ -170,10 +170,16 @@ public class ProductPricingService {
                         response.regionalDemand().basisDate(), response.regionalDemand().trainingStartDate(),
                         response.regionalDemand().trainingEndDate()
                 );
+        List<ProductPriceDto.PriceOption> priceOptions = response.priceOptions() == null ? List.of() :
+                response.priceOptions().stream().map(option -> new ProductPriceDto.PriceOption(
+                        option.purpose(), option.label(), option.price(), option.discountPct(),
+                        option.salesLikelihoodIndex(), option.expectedRevenue(),
+                        option.majorFactors() == null ? List.of() : option.majorFactors()
+                )).toList();
         return new ProductPriceDto.Response(
                 response.currentPrice(), response.discountPct(), response.minutesLeft(), timeline,
                 response.confidence(), response.modelVersion(), response.reason(), response.explanationMethod(),
-                explanations, response.weatherSummary(), weather, regionalDemand,
+                explanations, response.weatherSummary(), weather, regionalDemand, priceOptions,
                 state.enabled(), state.lastUpdatedAt(), state.nextUpdateAt()
         );
     }

@@ -19,7 +19,8 @@ public record AiPriceResponse(
         List<Explanation> explanations,
         String weatherSummary,
         Weather weather,
-        RegionalDemand regionalDemand
+        RegionalDemand regionalDemand,
+        List<PriceOption> priceOptions
 ) {
     public record PricePoint(String time, Integer price) {}
     public record Explanation(String feature, String label, Double value, String displayValue, Double impact, String direction) {}
@@ -41,5 +42,14 @@ public record AiPriceResponse(
             String basisDate,
             String trainingStartDate,
             String trainingEndDate
+    ) {}
+    public record PriceOption(
+            String purpose,
+            String label,
+            Integer price,
+            Double discountPct,
+            Integer salesLikelihoodIndex,
+            Integer expectedRevenue,
+            List<String> majorFactors
     ) {}
 }

@@ -21,6 +21,7 @@ public class ProductPriceDto {
             String weatherSummary,
             Weather weather,
             RegionalDemand regionalDemand,
+            List<PriceOption> priceOptions,
             boolean autoPricingEnabled,
             String lastUpdatedAt,
             String nextUpdateAt
@@ -59,6 +60,16 @@ public class ProductPriceDto {
             String basisDate,
             String trainingStartDate,
             String trainingEndDate
+    ) {}
+
+    public record PriceOption(
+            String purpose,
+            String label,
+            Integer price,
+            Double discountPct,
+            Integer salesLikelihoodIndex,
+            Integer expectedRevenue,
+            List<String> majorFactors
     ) {}
 
     public record AutoPricingRequest(boolean enabled) {}

@@ -82,6 +82,10 @@ class ProductPricingServiceTest {
         assertThat(response.weather().currentTemperature()).isEqualTo(26.2);
         assertThat(response.regionalDemand().region()).isEqualTo("애월읍");
         assertThat(response.regionalDemand().source()).isEqualTo("DAILY_FLOW_EBM_3Y");
+        assertThat(response.priceOptions()).hasSize(3);
+        assertThat(response.priceOptions()).extracting(ProductPriceDto.PriceOption::purpose)
+                .containsExactly("PROFIT", "BALANCED", "SELL_THROUGH");
+        assertThat(response.priceOptions().get(1).price()).isEqualTo(response.currentPrice());
     }
 
     @Test

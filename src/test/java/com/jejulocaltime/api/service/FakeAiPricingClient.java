@@ -33,7 +33,12 @@ public class FakeAiPricingClient implements AiPricingClient {
             new AiPriceResponse.Weather(26.2, 0.0, 1.2, 26.0, 0.0, 2.0,
                     "KMA_ULTRA_SHORT", "2026-07-16T18:00:00+09:00"),
             new AiPriceResponse.RegionalDemand("애월읍", 0.72, 18420,
-                    "DAILY_FLOW_EBM_3Y", "2026-07-16", "2023-06-02", "2026-05-31")
+                    "DAILY_FLOW_EBM_3Y", "2026-07-16", "2023-06-02", "2026-05-31"),
+            List.of(
+                    new AiPriceResponse.PriceOption("PROFIT", "수익 우선", 9000, 10.0, 55, 24750, List.of("건당 매출 우선")),
+                    new AiPriceResponse.PriceOption("BALANCED", "균형", 8000, 20.0, 70, 28000, List.of("판매와 매출 균형")),
+                    new AiPriceResponse.PriceOption("SELL_THROUGH", "판매 우선", 7000, 30.0, 85, 29750, List.of("잔여 수량 소진 우선"))
+            )
     );
 
     public static final AiStrategyResponse DEFAULT_STRATEGY_RESPONSE =
