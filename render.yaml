@@ -48,6 +48,10 @@ services:
         sync: false
       - key: KAKAO_CLIENT_SECRET
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_RECOMMENDATION_MODEL
+        value: gpt-5.6
       # 별도 Hobby 워크스페이스에 배포한 AI의 공개 주소
       - key: AI_SERVICE_BASE_URL
         value: https://jeju-localtime-ai.onrender.com

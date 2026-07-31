@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 import java.util.*;
 
 import static org.springframework.http.HttpStatus.*;
@@ -77,10 +78,9 @@ public class BuyerAiRecommendationService {
             SELECT p.id,p.name,p.description,sp.business_name,p.business_type,p.category,
                    p.environment_type,p.remaining_quantity,p.original_price,p.current_price,
                    p.available_start_at,p.reservation_close_at,p.address,p.latitude,p.longitude
-              FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
+             FROM product p JOIN seller_profile sp ON sp.id=p.seller_profile_id
              WHERE p.status='ACTIVE' AND p.remaining_quantity>0 AND p.reservation_close_at>now()
-             ORDER BY p.reservation_close_at ASC,
-                      (1-p.current_price::decimal/NULLIF(p.original_price,0)) DESC
+             ORDER BY p.reservation_close_at ASC
              LIMIT 50
             """;
         List<Candidate> all = jdbc.query(sql, (r, n) -> new Candidate(
@@ -90,10 +90,15 @@ public class BuyerAiRecommendationService {
                 r.getInt("original_price"), r.getInt("current_price"),
                 r.getObject("available_start_at", OffsetDateTime.class),
                 r.getObject("reservation_close_at", OffsetDateTime.class), r.getString("address"),
-                r.getObject("latitude", Double.class), r.getObject("longitude", Double.class)));
+                decimalAsDouble(r.getBigDecimal("latitude")),
+                decimalAsDouble(r.getBigDecimal("longitude"))));
         return all.stream()
                 .sorted(Comparator.comparingDouble(c -> preScore(c, lat, lng)))
                 .limit(20).toList();
+    }
+
+    private Double decimalAsDouble(BigDecimal value) {
+        return value == null ? null : value.doubleValue();
     }
 
     private double preScore(Candidate c, Double lat, Double lng) {
