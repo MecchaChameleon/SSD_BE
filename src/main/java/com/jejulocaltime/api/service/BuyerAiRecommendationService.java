@@ -60,7 +60,7 @@ public class BuyerAiRecommendationService {
             for (JsonNode reason : item.path("reasons")) {
                 reasons.add(new AiRecommendationReason(
                         reason.path("code").asText("MATCH"),
-                        reason.path("text").asText()));
+                        formatMinuteDurations(reason.path("text").asText())));
             }
             recommendations.add(new AiRecommendedProduct(
                     frontendApi.product(userId, candidate.id()),
@@ -83,7 +83,32 @@ public class BuyerAiRecommendationService {
                     "(?<![\\d:])" + candidate.id() + "(?=(?:은|는|이|가|번|,|·|\\s))",
                     java.util.regex.Matcher.quoteReplacement("'" + candidate.name() + "'"));
         }
-        return value;
+        return formatMinuteDurations(value);
+    }
+
+    private String formatMinuteDurations(String text) {
+        if (text == null || text.isBlank()) return text;
+        java.util.regex.Matcher matcher =
+                java.util.regex.Pattern.compile("([0-9][0-9,]*)분").matcher(text);
+        StringBuffer formatted = new StringBuffer();
+        while (matcher.find()) {
+            long minutes;
+            try {
+                minutes = Long.parseLong(matcher.group(1).replace(",", ""));
+            } catch (NumberFormatException ignored) {
+                continue;
+            }
+            if (minutes < 60) continue;
+            long hours = minutes / 60;
+            long remainingMinutes = minutes % 60;
+            String replacement = remainingMinutes == 0
+                    ? hours + "시간"
+                    : hours + "시간 " + remainingMinutes + "분";
+            matcher.appendReplacement(formatted,
+                    java.util.regex.Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(formatted);
+        return formatted.toString();
     }
 
     private List<Candidate> loadCandidates(Double lat, Double lng) {
@@ -136,9 +161,19 @@ public class BuyerAiRecommendationService {
         value.put("discountPct", discountPct); value.put("remainingQuantity", c.quantity());
         value.put("availableFrom", c.availableFrom()); value.put("deadline", c.deadline());
         value.put("minutesUntilDeadline", minutesLeft);
+        value.put("timeUntilDeadlineLabel", koreanDuration(minutesLeft));
         value.put("straightLineDistanceKm", Double.isFinite(km) ? Math.round(km * 10) / 10d : null);
         value.put("estimatedDriveMinutes", driveMinutes);
         return value;
+    }
+
+    private String koreanDuration(long totalMinutes) {
+        long minutes = Math.max(0, totalMinutes);
+        long hours = minutes / 60;
+        long remainder = minutes % 60;
+        if (hours == 0) return remainder + "분";
+        if (remainder == 0) return hours + "시간";
+        return hours + "시간 " + remainder + "분";
     }
 
     private Map<String, Object> currentWeather(Double lat, Double lng) {
@@ -182,6 +217,8 @@ public class BuyerAiRecommendationService {
                     productId는 시스템의 내부 식별자다. summary와 reasons에는 productId, 내부 코드,
                     JSON 필드명을 절대 노출하지 말고 반드시 사람이 읽을 수 있는 상품명과 자연어만 사용한다.
                     summary는 전체 추천 기준을 자연스럽게 설명하고 상품을 언급할 때는 상품명을 사용한다.
+                    시간 차이는 timeUntilDeadlineLabel을 사용한다. 60분 이상인 시간을 890분처럼
+                    분 단위로만 쓰지 말고 반드시 '14시간 50분', '2시간' 형식으로 표현한다.
                     """);
             body.put("input", objectMapper.writeValueAsString(input));
             body.put("text", Map.of("format", Map.of(
