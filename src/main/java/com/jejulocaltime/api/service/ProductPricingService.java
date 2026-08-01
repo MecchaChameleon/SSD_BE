@@ -44,8 +44,14 @@ public class ProductPricingService {
     }
 
     @Transactional
-    public ProductPriceDto.AutoPricingResponse setAutoPricing(Long userId, Long productId, boolean enabled) {
+    public ProductPriceDto.AutoPricingResponse setAutoPricing(Long userId, Long productId, boolean enabled,
+                                                               Product.PricingPurpose purpose) {
         Product product = accessGuard.requireOwnedProduct(userId, productId);
+        if (purpose != null) {
+            product.setAiPricingPurpose(purpose);
+        } else if (product.getAiPricingPurpose() == null) {
+            product.setAiPricingPurpose(Product.PricingPurpose.BALANCED);
+        }
         product.setAiAutoPricingEnabled(enabled);
         if (enabled) {
             calculate(product, true);
@@ -135,7 +141,14 @@ public class ProductPricingService {
     private void applyRecommendation(Product product, AiPriceResponse response) {
         int minimum = value(product.getMinimumPrice(), 0);
         int maximum = Math.max(minimum, value(product.getOriginalPrice(), minimum));
-        int recommended = Math.max(minimum, Math.min(maximum, value(response.currentPrice(), maximum)));
+        Product.PricingPurpose purpose = pricingPurpose(product);
+        Integer purposePrice = response.priceOptions() == null ? null : response.priceOptions().stream()
+                .filter(option -> purpose.name().equals(option.purpose()))
+                .map(AiPriceResponse.PriceOption::price)
+                .findFirst()
+                .orElse(null);
+        int recommended = Math.max(minimum, Math.min(maximum,
+                value(purposePrice, value(response.currentPrice(), maximum))));
         Integer previous = product.getCurrentPrice();
         product.setCurrentPrice(recommended);
         product.setAiLastPricedAt(OffsetDateTime.now());
@@ -180,14 +193,19 @@ public class ProductPricingService {
                 response.currentPrice(), response.discountPct(), response.minutesLeft(), timeline,
                 response.confidence(), response.modelVersion(), response.reason(), response.explanationMethod(),
                 explanations, response.weatherSummary(), weather, regionalDemand, priceOptions,
+                pricingPurpose(product),
                 state.enabled(), state.lastUpdatedAt(), state.nextUpdateAt()
         );
     }
 
     private ProductPriceDto.AutoPricingResponse autoState(Product product) {
         OffsetDateTime last = product.getAiLastPricedAt();
-        return new ProductPriceDto.AutoPricingResponse(product.isAiAutoPricingEnabled(), stringValue(last),
+        return new ProductPriceDto.AutoPricingResponse(product.isAiAutoPricingEnabled(), pricingPurpose(product), stringValue(last),
                 last == null || !product.isAiAutoPricingEnabled() ? null : last.plusMinutes(UPDATE_INTERVAL_MINUTES).toString());
+    }
+
+    private static Product.PricingPurpose pricingPurpose(Product product) {
+        return product.getAiPricingPurpose() == null ? Product.PricingPurpose.BALANCED : product.getAiPricingPurpose();
     }
 
     private static int value(Integer value, int fallback) { return value == null ? fallback : value; }

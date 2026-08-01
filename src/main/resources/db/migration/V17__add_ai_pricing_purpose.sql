@@ -1,0 +1,2 @@
+ALTER TABLE product
+    ADD COLUMN ai_pricing_purpose VARCHAR(20) NOT NULL DEFAULT 'BALANCED';

@@ -124,6 +124,22 @@ class ProductPricingServiceTest {
     }
 
     @Test
+    void 선택한_판매전략을_저장하고_해당_가격을_자동_판매가에_반영한다() {
+        product.setStatus(Product.Status.ACTIVE);
+        product.setMinimumPrice(6000);
+
+        ProductPriceDto.AutoPricingResponse state = productPricingService.setAutoPricing(
+                USER_ID, PRODUCT_ID, true, Product.PricingPurpose.SELL_THROUGH);
+        ProductPriceDto.Response response = productPricingService.getPriceRecommendation(USER_ID, PRODUCT_ID);
+
+        assertThat(product.getAiPricingPurpose()).isEqualTo(Product.PricingPurpose.SELL_THROUGH);
+        assertThat(product.getCurrentPrice()).isEqualTo(7000);
+        assertThat(state.purpose()).isEqualTo(Product.PricingPurpose.SELL_THROUGH);
+        assertThat(response.selectedPurpose()).isEqualTo(Product.PricingPurpose.SELL_THROUGH);
+        verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(product);
+    }
+
+    @Test
     void 상품_주소에_읍면동이_없으면_판매자_매장_주소를_지역수요에_함께_전달한다() {
         product.setAddress("애월 해안 매장");
 

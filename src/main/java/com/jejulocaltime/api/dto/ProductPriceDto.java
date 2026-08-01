@@ -1,5 +1,6 @@
 package com.jejulocaltime.api.dto;
 
+import com.jejulocaltime.api.domain.Product;
 import java.util.List;
 
 /**
@@ -22,6 +23,7 @@ public class ProductPriceDto {
             Weather weather,
             RegionalDemand regionalDemand,
             List<PriceOption> priceOptions,
+            Product.PricingPurpose selectedPurpose,
             boolean autoPricingEnabled,
             String lastUpdatedAt,
             String nextUpdateAt
@@ -72,7 +74,7 @@ public class ProductPriceDto {
             List<String> majorFactors
     ) {}
 
-    public record AutoPricingRequest(boolean enabled) {}
+    public record AutoPricingRequest(boolean enabled, Product.PricingPurpose purpose) {}
 
-    public record AutoPricingResponse(boolean enabled, String lastUpdatedAt, String nextUpdateAt) {}
+    public record AutoPricingResponse(boolean enabled, Product.PricingPurpose purpose, String lastUpdatedAt, String nextUpdateAt) {}
 }

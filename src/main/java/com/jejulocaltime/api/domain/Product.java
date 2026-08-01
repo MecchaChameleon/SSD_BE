@@ -96,6 +96,10 @@ public class Product {
     @Column(name = "ai_auto_pricing_enabled", nullable = false)
     private boolean aiAutoPricingEnabled;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ai_pricing_purpose", nullable = false)
+    private PricingPurpose aiPricingPurpose = PricingPurpose.BALANCED;
+
     @Column(name = "ai_last_priced_at")
     private OffsetDateTime aiLastPricedAt;
 
@@ -194,6 +198,10 @@ public class Product {
 
     public enum FootTrafficLevel {
         HIGH, LOW
+    }
+
+    public enum PricingPurpose {
+        PROFIT, BALANCED, SELL_THROUGH
     }
 
     public enum Status {

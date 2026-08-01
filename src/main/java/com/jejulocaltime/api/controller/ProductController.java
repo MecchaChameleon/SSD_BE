@@ -92,7 +92,7 @@ public class ProductController {
     public ResponseEntity<ApiResponseTemplate<ProductPriceDto.AutoPricingResponse>> setAutoPricing(
             @AuthenticationPrincipal Long userId, @PathVariable Long productId,
             @RequestBody ProductPriceDto.AutoPricingRequest request) {
-        return ApiResponseTemplate.success(productPricingService.setAutoPricing(userId, productId, request.enabled()));
+        return ApiResponseTemplate.success(productPricingService.setAutoPricing(userId, productId, request.enabled(), request.purpose()));
     }
 
     // 4. 판매 전략 제안 조회
